@@ -5,17 +5,17 @@ mkdir -p ~/jenkins-dev-yml
 
 kubectl create ns jenkins-dev
 
-cat > ~/jenkins-prod-yml/Jenkins-prod-rbac.yml << 'EOF'
+cat > ~/jenkins-dev-yml/Jenkins-dev-rbac.yml << 'EOF'
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: jenkins-prod
+  name: jenkins-dev
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: jenkins-prod
-  namespace: jenkins-prod
+  name: jenkins-dev
+  namespace: jenkins-dev
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -24,7 +24,7 @@ metadata:
     rbac.authorization.kubernetes.io/autoupdate: "true"
   labels:
     kubernetes.io/bootstrapping: rbac-defaults
-  name: jenkins-prod
+  name: jenkins-dev
 rules:
 - apiGroups:
   - '*'
@@ -77,30 +77,30 @@ metadata:
     rbac.authorization.kubernetes.io/autoupdate: "true"
   labels:
     kubernetes.io/bootstrapping: rbac-defaults
-  name: jenkins-prod
+  name: jenkins-dev
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: jenkins-prod
+  name: jenkins-dev
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: Group
-  name: system:serviceaccounts:jenkins-prod
+  name: system:serviceaccounts:jenkins-dev
 EOF
 
-kubectl apply -f ~/jenkins-prod-yml/Jenkins-prod-rbac.yml
+kubectl apply -f ~/jenkins-dev-yml/Jenkins-dev-rbac.yml
 
-cat > ~/jenkins-prod-yml/Jenkins-prod-Service.yml << 'EOF'
+cat > ~/jenkins-dev-yml/Jenkins-dev-Service.yml << 'EOF'
 apiVersion: v1
 kind: Service
 metadata:
-  name: jenkins-prod
-  namespace: jenkins-prod
+  name: jenkins-dev
+  namespace: jenkins-dev
   labels:
-    app: jenkins-prod
+    app: jenkins-dev
 spec:
   selector:
-    app: jenkins-prod
+    app: jenkins-dev
   type: NodePort
   ports:
   - name: web
@@ -113,32 +113,32 @@ spec:
     targetPort: agent
 EOF
 
-cat > ~/jenkins-prod-yml/Jenkins-prod-Deployment.yml << 'EOF'
+cat > ~/jenkins-dev-yml/Jenkins-dev-Deployment.yml << 'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jenkins-prod
-  namespace: jenkins-prod
+  name: jenkins-dev
+  namespace: jenkins-dev
   labels:
-    app: jenkins-prod
+    app: jenkins-dev
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jenkins-prod
+      app: jenkins-dev
   template:
     metadata:
       labels:
-        app: jenkins-prod
+        app: jenkins-dev
     spec:
       tolerations:
       - effect: NoSchedule
         key: no-pod
         operator: Exists
 #     nodeSelector:
-#       jenkins-prod: jenkins-prod
+#       jenkins-dev: jenkins-dev
       containers:
-      - name: jenkins-prod
+      - name: jenkins-dev
         #image: jenkins/jenkins:2.454-jdk21
         image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins:2.454-jdk21
         imagePullPolicy: IfNotPresent
@@ -167,14 +167,14 @@ spec:
         - name: JAVA_OPTS
           value: -Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=true
         volumeMounts:
-        - name: jenkins-home-prod
+        - name: jenkins-home-dev
           mountPath: /var/jenkins_home
         - mountPath: /etc/localtime
           name: localtime
       volumes:
-      - name: jenkins-home-prod
+      - name: jenkins-home-dev
         persistentVolumeClaim:
-          claimName: jenkins-home-prod
+          claimName: jenkins-home-dev
       - name: localtime
         hostPath:
           path: /etc/localtime
@@ -183,8 +183,8 @@ spec:
 apiVersion: v1
 kind:  PersistentVolumeClaim
 metadata:
-  name: jenkins-home-prod
-  namespace: jenkins-prod
+  name: jenkins-home-dev
+  namespace: jenkins-dev
 spec:
   storageClassName: "nfs-storage"
   accessModes: [ReadWriteOnce]
@@ -193,4 +193,4 @@ spec:
       storage: 2Ti
 EOF
 
-kubectl apply -f ~/jenkins-prod-yml/Jenkins-prod-Deployment.yml
+kubectl apply -f ~/jenkins-dev-yml/Jenkins-dev-Deployment.yml
