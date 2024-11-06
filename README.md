@@ -1,6 +1,3 @@
 # DevOps-Doc
 
-
-````shell
-curl -sSL https://github.com/kubelsp/DevOps-Doc/raw/main/install_jenkins_k8s.sh | sh
-````
+![image-20240419225413784](https://gitlab.huanghuanhui.com/root/devops/-/raw/main/devops.png)
