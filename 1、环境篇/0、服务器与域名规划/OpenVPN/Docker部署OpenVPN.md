@@ -39,7 +39,14 @@ docker run -v ~/openvpn-data:/etc/openvpn --rm -it ccr.ccs.tencentyun.com/huangh
 ###### 启动openvpn
 
 ```shell
-docker run --name openvpn -v ~/openvpn-data:/etc/openvpn -d -p 1194:1194/udp --cap-add=NET_ADMIN ccr.ccs.tencentyun.com/huanghuanhui/openvpn:2.4.8
+docker run -d \
+--name openvpn \
+--restart always \
+--privileged=true \
+-v ~/openvpn-data:/etc/openvpn \
+-p 1194:1194/udp \
+--cap-add=NET_ADMIN \
+ccr.ccs.tencentyun.com/huanghuanhui/openvpn:2.4.8
 ```
 
 ###### openvpn用户管理 -- 添加用户脚本
