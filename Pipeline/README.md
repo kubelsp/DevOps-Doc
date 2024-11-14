@@ -25,10 +25,13 @@ Blue-Green版本切换
 后端-stable-canary
 
 前端-stable-canary
+
+### 1、蓝绿发布
 ![image-20240419225413784](https://github.com/kubelsp/DevOps-Doc/blob/main/Pipeline/pipeline-1.png)
 
 ![image-20240419225413784](https://github.com/kubelsp/DevOps-Doc/blob/main/Pipeline/pipeline-2.png)
 
 ![image-20240419225413784](https://github.com/kubelsp/DevOps-Doc/blob/main/Pipeline/pipeline-3.png)
 
+### 2、金丝雀发布
 ![image-20240419225413784](https://github.com/kubelsp/DevOps-Doc/blob/main/Pipeline/pipeline.png)
