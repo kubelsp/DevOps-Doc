@@ -4,7 +4,7 @@ metadata:
   name: java-xxx
   namespace: prod
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: java-xxx
@@ -32,11 +32,11 @@ spec:
         - -XX:+PrintReferenceGC
         - -XX:+PrintGCApplicationStoppedTime
         - -XX:+HeapDumpOnOutOfMemoryError
-        - -XX:HeapDumpPath=/var/www/sites/logs/dump-$(date '+%s').hprof
+        - -XX:HeapDumpPath=/usr/local/src/logs/dump-$(date '+%s').hprof
         - -Dsentry.dsn=https://53aa95c8c7994231afc06545dcafbfd2@devstagesentry.jingsocial.com/106
         - -jar
-        - /var/www/sites/operation-application-api.jar
-        - --spring.profiles.active=dev
+        - /usr/local/src/app.jar
+        - --spring.profiles.active=prod
         env:
         - name: TZ
           value: Asia/Shanghai
