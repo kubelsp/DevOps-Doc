@@ -1,0 +1,138 @@
+#!/usr/bin/env groovy
+
+def git_auth = "1fa96864-5699-483b-a920-2af11df61119"
+def harbor_auth = "1e0ae5b9-b151-45b9-a94f-bd02d803ff22"
+def kubectl_auth = "c26898c2-92c3-4c19-8490-9cf8ff7918ef"
+
+
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  name: jenkins-slave
+  namespace: jenkins-prod
+spec:
+  tolerations:
+  - key: k8s-jenkins
+    operator: Equal
+    value: k8s-jenkins
+    effect: NoSchedule
+  containers:
+  - name: docker
+    #image: docker:24.0.6
+    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:24.0.6
+    imagePullPolicy: IfNotPresent
+    readinessProbe:
+      exec:
+        command: [sh, -c, "ls -S /var/run/docker.sock"]
+    command:
+    - sleep
+    args:
+    - 99d
+    volumeMounts:
+    - name: docker-socket
+      mountPath: /var/run
+  - name: docker-daemon
+    #image: docker:24.0.6-dind
+    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:24.0.6-dind
+    imagePullPolicy: IfNotPresent
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: docker-socket
+      mountPath: /var/run
+  - name: golang
+    #image: golang:1.21.3
+    image: ccr.ccs.tencentyun.com/huanghuanhui/golang:1.21.3
+    imagePullPolicy: IfNotPresent
+    command:
+    - sleep
+    args:
+    - 99d
+  - name: kubectl
+    #image: kostiscodefresh/kubectl-argo-rollouts:v1.6.0
+    image: ccr.ccs.tencentyun.com/huanghuanhui/kubectl:v1.6.0
+    imagePullPolicy: IfNotPresent
+    command:
+    - sleep
+    args:
+    - 99d
+  volumes:
+  - name: docker-socket
+    emptyDir: {}
+'''
+        }
+    }
+
+environment {
+AppName = "${AppName}"
+GitRepo = "${GitRepo}"
+GitBranch = "${GitBranch}"
+Server = "${Server}"
+RepoName = "${RepoName}"
+BaseImage = "${BaseImage}"
+}
+
+    stages {
+        stage('拉取代码') {
+            steps {
+            git branch: "${GitBranch}", credentialsId: "${git_auth}", url: "${GitRepo}"
+            }
+        }
+
+        stage('代码编译') {
+            steps {
+              container('golang') {
+                sh """
+                 ls -l
+                   """
+                }
+            }
+        }
+
+        stage('打包镜像') {
+            steps {
+              script {env.GIT_COMMIT_MSG = sh (script: 'git rev-parse --short HEAD', returnStdout: true).trim()}
+              container('docker') {
+sh '''
+cat > Dockerfile << EOF
+FROM ${BaseImage}
+WORKDIR /usr/share/nginx/html
+ADD ./* /usr/share/nginx/html
+EOF
+docker build -t ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID} . && docker images
+'''
+                }
+            }
+        }
+
+        stage('推送镜像') {
+            steps {
+              container('docker') {
+                withCredentials([usernamePassword(credentialsId: "${harbor_auth}", passwordVariable: 'password', usernameVariable: 'username')]) {
+                sh """
+                docker login -u ${username} -p '${password}' ${Server}
+                docker push ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID}
+                """
+                   }
+                }
+            }
+        }
+        
+        stage('argo-rollouts + istio（金丝雀发布）（渐进式交付）') {
+            steps {
+              container('kubectl') {
+              configFileProvider([configFile(fileId: "${kubectl_auth}", variable: 'kubeconfig')]) {
+                sh """
+                mkdir -p ~/.kube && cp ${kubeconfig} ~/.kube/config
+                 /app/kubectl-argo-rollouts-linux-amd64 set image ${AppName} "*=${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID}" -n prod
+                """
+                   }
+                }
+            }
+        }
+    }
+}
