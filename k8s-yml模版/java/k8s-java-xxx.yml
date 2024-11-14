@@ -14,8 +14,7 @@ spec:
         app: java-xxx
     spec:
       containers:
-      - command:
-        - java
+      - args:
         - -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
         - -XX:+UseG1GC
         - -XX:InitialRAMPercentage=25.0
@@ -37,6 +36,8 @@ spec:
         - -jar
         - /usr/local/src/app.jar
         - --spring.profiles.active=prod
+        command:
+        - java
         env:
         - name: TZ
           value: Asia/Shanghai
