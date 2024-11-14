@@ -51,8 +51,8 @@ RepoName = "${RepoName}"
 sh '''
 cat > sdk.sh << 'EOF'
 #!/bin/bash
-secret_id="AKIDKTVhIrOo5SeeU8c1hOIF4nU6fJtPp9Qa"
-secret_key="KTjy7OxbLD32BTrHexDg3OpDCNkDdu3A"
+secret_id="AKIDKTVhIrOo5SeeU8c1hOIF4nU6fJtPp9Qa-k8s"
+secret_key="KTjy7OxbLD32BTrHexDg3OpDCNkDdu3A-k8s"
 token=""
 
 service="tcr"
