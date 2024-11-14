@@ -2,6 +2,7 @@
 
 def git_auth = "1fa96864-5699-483b-a920-2af11df61119"
 def harbor_auth = "1e0ae5b9-b151-45b9-a94f-bd02d803ff22"
+def kubectl_auth = "c26898c2-92c3-4c19-8490-9cf8ff7918ef"
 
 pipeline {
     agent {
@@ -41,19 +42,30 @@ spec:
     volumeMounts:
     - name: docker-socket
       mountPath: /var/run
-  - name: maven
-    #image: maven:3.8.1-jdk-8
-    image: ccr.ccs.tencentyun.com/huanghuanhui/maven:3.8.1-jdk-8
+  - name: alpine	
+    #image: alpine:3.19.0
+    image: ccr.ccs.tencentyun.com/huanghuanhui/alpine:3.19.0
     imagePullPolicy: IfNotPresent
     command:
     - sleep
     args:
     - 99d
     volumeMounts:
-    - name: maven-cache
-      mountPath: /root/.m2/repository
+    - name: node-cache
+      mountPath: /root/.npm
+  - name: node
+    #image: node:16.17.0-alpine
+    image: ccr.ccs.tencentyun.com/huanghuanhui/node:16.17.0-alpine
+    imagePullPolicy: IfNotPresent
+    command:
+    - sleep
+    args:
+    - 99d
+    volumeMounts:
+    - name: node-cache
+      mountPath: /root/.npm
   - name: kubectl
-    image: ccr.ccs.tencentyun.com/huanghuanhui/kubectl:v1.6.0
+    image: kostiscodefresh/kubectl-argo-rollouts:v1.6.0
     imagePullPolicy: IfNotPresent
     command:
     - sleep
@@ -76,6 +88,7 @@ spec:
         }
     }
 
+
 environment {
 AppName = "${AppName}"
 GitRepo = "${GitRepo}"
@@ -83,31 +96,39 @@ GitBranch = "${GitBranch}"
 Server = "${Server}"
 RepoName = "${RepoName}"
 BaseImage = "${BaseImage}"
-JAVA_OPTS = "${JAVA_OPTS}"
 }
 
     parameters {
-        string(name: 'AppName', defaultValue: 'blue-ruoyi-auth', description: '服务名')
+        string(name: 'AppName', defaultValue: 'green-ruoyi-vue', description: '服务名')
         string(name: 'GitRepo', defaultValue: 'https://gitlab.huanghuanhui.com/root/RuoYi-Cloud.git', description: '代码仓库地址')
-        string(name: 'GitBranch', defaultValue: 'blue', description: '代码版本')
+        string(name: 'GitBranch', defaultValue: 'green', description: '代码版本')
         string(name: 'Server', defaultValue: 'ccr.ccs.tencentyun.com', description: '仓库地址')
-        string(name: 'RepoName', defaultValue: 'huanghuanhui/dev-blue-ruoyi-auth', description: '仓库名字（仓库自动创建）')
+        string(name: 'RepoName', defaultValue: 'huanghuanhui/green-ruoyi-vue', description: '仓库名字（仓库自动创建）')
         string(name: 'BaseImage', defaultValue: 'ccr.ccs.tencentyun.com/huanghuanhui/openjdk:8-jre', description: '基础镜像')
-        string(name: 'JAVA_OPTS', defaultValue: '-Xms1024M -Xmx1024M -Xmn256M -Dspring.config.location=app.yml -Dserver.tomcat.max-threads=800', description: 'jar 运行时的参数配置')
     }
-    
+
     stages {
         stage('拉取代码') {
 			steps {
 			git branch: "${GitBranch}", credentialsId: "${git_auth}", url: "${GitRepo}"
 			}
 		}
-
+        
+        stage('加载依赖') {
+            steps {
+              container('alpine') {
+                sh """
+                  cd ruoyi-ui && cp /root/.npm/node_modules.tar.gz . && tar xf node_modules.tar.gz
+                """
+                }
+            }
+        }
+        
         stage('代码编译') {
             steps {
-              container('maven') {
+              container('node') {
                 sh """
-                  mvn -U clean install -Dmaven.test.skip=true
+                  cd ruoyi-ui && sed -i \'s/localhost/ruoyi-gateway-svc/g\' vue.config.js && npm install --registry=https://registry.npmmirror.com && npm run build:prod
                 """
                 }
             }
@@ -117,50 +138,59 @@ JAVA_OPTS = "${JAVA_OPTS}"
             steps {
               script {env.GIT_COMMIT_MSG = sh (script: 'git rev-parse --short HEAD', returnStdout: true).trim()}
               container('docker') {
-sh '''cat > entrypoint.sh << EOF
-#! /bash/bin -e
-env
-java $JAVA_OPTS -jar ./*.jar
+sh '''cat > nginx.conf << 'EOF'
+worker_processes  auto;
+
+events {
+    worker_connections  10240;
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+
+    server {
+        listen       80;
+        server_name  localhost;
+
+        location / {
+            root   /usr/share/nginx/html;
+            try_files $uri $uri/ /index.html;
+            index  index.html index.htm;
+        }
+
+        location /prod-api/{
+            proxy_pass http://ruoyi-gateway-svc:8080/;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header REMOTE-HOST $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_http_version 1.1;
+        }
+
+        # 避免actuator暴露
+        if ($request_uri ~ "/actuator") {
+            return 403;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+    }
+}
 EOF
 
-cat > app.yml << EOF
-# Tomcat
-server:
-  port: 9200
+cat > dockerfile << 'EOF'
+FROM ccr.ccs.tencentyun.com/huanghuanhui/nginx:1.25.3-alpine
 
-# Spring
-spring:
-  application:
-    # 应用名称
-    name: ${AppName}
-  profiles:
-    # 环境配置
-    active: dev
-  cloud:
-    nacos:
-      discovery:
-        # 服务注册地址
-        server-addr: nacos-headless.nacos.svc.cluster.local:8848
-        namespace: blue-prod
-      config:
-        # 配置中心地址
-        server-addr: nacos-headless.nacos.svc.cluster.local:8848
-        namespace: blue-prod
-        # 配置文件格式
-        file-extension: yml
-        # 共享配置
-        shared-configs:
-          - application
-EOF
+WORKDIR /usr/share/nginx/html
 
+COPY nginx.conf /etc/nginx/nginx.conf
 
-cat > Dockerfile << EOF
-FROM ${BaseImage}
-WORKDIR /usr/local/src/
-ADD ./ruoyi-auth/target/ruoyi-auth.jar /usr/local/src/ruoyi-auth.jar
-ADD app.yml .
-ADD entrypoint.sh .
-ENTRYPOINT ["sh","./entrypoint.sh"]
+COPY ./ruoyi-ui/dist /usr/share/nginx/html
 EOF
 
 docker build -t ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID} .
@@ -168,6 +198,7 @@ docker build -t ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID}
                 }
             }
         }
+
 
         stage('推送镜像') {
             steps {
@@ -178,6 +209,16 @@ docker build -t ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID}
                 docker push ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID}
                 """
                    }
+                }
+            }
+        }
+
+        stage('依赖持久化') {
+            steps {
+              container('alpine') {
+                sh """
+                  tar zcf node_modules.tar.gz ruoyi-ui/node_modules && mv -f ruoyi-ui/node_modules.tar.gz /root/.npm
+                """
                 }
             }
         }
