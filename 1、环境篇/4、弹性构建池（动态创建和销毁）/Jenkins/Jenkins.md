@@ -391,7 +391,7 @@ spec:
       mountPath: /var/run
   - name: docker-daemon
     #image: docker:27.1.1-dind
-    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:21.1.1-dind
+    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:27.1.1-dind
     imagePullPolicy: IfNotPresent
     securityContext:
       privileged: true
