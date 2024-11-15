@@ -122,6 +122,8 @@ metadata:
   name: kuboard-ingress
   namespace: kuboard
   annotations:
+    cert-manager.io/cluster-issuer: prod-issuer 
+    acme.cert-manager.io/http01-edit-in-place: "true" 
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
     nginx.ingress.kubernetes.io/proxy-body-size: '4G'
 spec:
