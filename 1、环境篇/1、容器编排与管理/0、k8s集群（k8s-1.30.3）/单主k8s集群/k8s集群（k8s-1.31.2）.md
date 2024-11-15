@@ -480,7 +480,7 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```shell
 mkdir -p ~/calico-yml
 
-cd ~/calico-yml && wget https://gitee.com/kubelsp/upload/raw/master/calico/v3.28.1/calico.yaml
+cd ~/calico-yml && wget https://ghp.ci/https://github.com/projectcalico/calico/raw/v3.29.0/manifests/calico.yaml
 ```
 
 ```shell
