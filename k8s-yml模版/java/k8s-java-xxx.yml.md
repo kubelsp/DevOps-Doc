@@ -57,10 +57,6 @@ spec:
         env:
         - name: TZ
           value: Asia/Shanghai
-        - name: NACOS_MICRO_SERVICE_CONFIG_GROUP
-          value: operation
-        - name: NACOS_MICRO_SERVICE_CONFIG_DATA_ID
-          value: operation-application-api-config
         envFrom:
         - configMapRef:
             name: nacos-connection-config
