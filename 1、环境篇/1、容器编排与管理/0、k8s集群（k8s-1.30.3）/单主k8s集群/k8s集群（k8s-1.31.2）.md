@@ -517,11 +517,11 @@ sed -i '/- name: IP_AUTODETECTION_METHOD/a \              value: "interface=eth0
 
 ```shell
 # 3 修改镜像仓库
-sed -i 's#docker.io/calico/cni:v3.28.1#ccr.ccs.tencentyun.com/huanghuanhui/calico:cni-v3.28.1#g' calico.yaml
+sed -i 's#docker.io/calico/cni:v3.29.0#ccr.ccs.tencentyun.com/huanghuanhui/calico:cni-v3.29.0#g' calico.yaml
 
-sed -i 's#docker.io/calico/node:v3.28.1#ccr.ccs.tencentyun.com/huanghuanhui/calico:node-v3.28.1#g' calico.yaml
+sed -i 's#docker.io/calico/node:v3.29.0#ccr.ccs.tencentyun.com/huanghuanhui/calico:node-v3.29.0#g' calico.yaml
 
-sed -i 's#docker.io/calico/kube-controllers:v3.28.1# ccr.ccs.tencentyun.com/huanghuanhui/calico:kube-controllers-v3.28.1#g' calico.yaml
+sed -i 's#docker.io/calico/kube-controllers:v3.29.0# ccr.ccs.tencentyun.com/huanghuanhui/calico:kube-controllers-v3.29.0#g' calico.yaml
 ```
 
 ```shell
