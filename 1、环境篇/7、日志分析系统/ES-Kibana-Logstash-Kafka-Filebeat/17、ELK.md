@@ -172,6 +172,8 @@ metadata:
   name: kibana-ingress
   namespace: elastic-system
   annotations:
+    cert-manager.io/cluster-issuer: prod-issuer 
+    acme.cert-manager.io/http01-edit-in-place: "true" 
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
     nginx.ingress.kubernetes.io/proxy-body-size: '4G'
 spec:
@@ -195,10 +197,10 @@ EOF
 ```
 
 ```shell
-kubectl create secret -n elastic-system \
-tls kibana-ingress-tls \
---key=/root/ssl/openhhh.com.key \
---cert=/root/ssl/openhhh.com.pem
+#kubectl create secret -n elastic-system \
+#tls kibana-ingress-tls \
+#--key=/root/ssl/openhhh.com.key \
+#--cert=/root/ssl/openhhh.com.pem
 ```
 
 ```shell
@@ -450,6 +452,8 @@ metadata:
   name: kafka-ui-ingress
   namespace: elastic-system
   annotations:
+    cert-manager.io/cluster-issuer: prod-issuer 
+    acme.cert-manager.io/http01-edit-in-place: "true" 
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
     nginx.ingress.kubernetes.io/proxy-body-size: '4G'
 spec:
@@ -473,10 +477,10 @@ EOF
 ```
 
 ```shell
-kubectl create secret -n elastic-system \
-tls kafka-ui-ingress-tls \
---key=/root/ssl/openhhh.com.key \
---cert=/root/ssl/openhhh.com.pem
+#kubectl create secret -n elastic-system \
+#tls kafka-ui-ingress-tls \
+#--key=/root/ssl/openhhh.com.key \
+#--cert=/root/ssl/openhhh.com.pem
 ```
 
 ```shell
