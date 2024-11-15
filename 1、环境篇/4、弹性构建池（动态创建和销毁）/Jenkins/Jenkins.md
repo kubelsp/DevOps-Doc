@@ -1,6 +1,6 @@
 ### 15、jenkins
 
-k8s手撕yml方式部署最新版 Jenkins-2.485（jdk-21版）（jenkins-prod）
+k8s手撕yml方式部署最新版 Jenkins-2.485（jdk-21版）（Jenkins）
 
 > https://github.com/jenkinsci/jenkins
 >
@@ -11,29 +11,29 @@ k8s手撕yml方式部署最新版 Jenkins-2.485（jdk-21版）（jenkins-prod）
 > Jenkins-2.485
 
 ```shell
-mkdir -p ~/jenkins-prod-yml
+mkdir -p ~/jenkins-yml
 
-kubectl create ns jenkins-prod
+kubectl create ns jenkins
 ```
 
 ```shell
-# kubectl label node k8s-jenkins jenkins-prod=jenkins-prod
+# kubectl label node k8s-jenkins jenkins=jenkins
 
-kubectl label node k8s-node1 jenkins-prod=jenkins-prod
+kubectl label node k8s-node1 jenkins=jenkins
 ```
 
 ```shell
-cat > ~/jenkins-prod-yml/Jenkins-prod-rbac.yml << 'EOF'
+cat > ~/jenkins-yml/Jenkins-rbac.yml << 'EOF'
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: jenkins-prod
+  name: jenkins
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: jenkins-prod
-  namespace: jenkins-prod
+  name: jenkins
+  namespace: jenkins
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -42,7 +42,7 @@ metadata:
     rbac.authorization.kubernetes.io/autoupdate: "true"
   labels:
     kubernetes.io/bootstrapping: rbac-defaults
-  name: jenkins-prod
+  name: jenkins
 rules:
 - apiGroups:
   - '*'
@@ -95,34 +95,34 @@ metadata:
     rbac.authorization.kubernetes.io/autoupdate: "true"
   labels:
     kubernetes.io/bootstrapping: rbac-defaults
-  name: jenkins-prod
+  name: jenkins
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: jenkins-prod
+  name: jenkins
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: Group
-  name: system:serviceaccounts:jenkins-prod
+  name: system:serviceaccounts:jenkins
 EOF
 ```
 
 ```shell
-kubectl apply -f ~/jenkins-prod-yml/Jenkins-prod-rbac.yml
+kubectl apply -f ~/jenkins-yml/Jenkins-rbac.yml
 ```
 
 ```shell
-cat > ~/jenkins-prod-yml/Jenkins-prod-Service.yml << 'EOF'
+cat > ~/jenkins-yml/Jenkins-Service.yml << 'EOF'
 apiVersion: v1
 kind: Service
 metadata:
-  name: jenkins-prod
-  namespace: jenkins-prod
+  name: jenkins
+  namespace: jenkins
   labels:
-    app: jenkins-prod
+    app: jenkins
 spec:
   selector:
-    app: jenkins-prod
+    app: jenkins
   type: NodePort
   ports:
   - name: web
@@ -137,36 +137,36 @@ EOF
 ```
 
 ```shell
-kubectl apply -f ~/jenkins-prod-yml/Jenkins-prod-Service.yml
+kubectl apply -f ~/jenkins-yml/Jenkins-Service.yml
 ```
 
 ```shell
-cat > ~/jenkins-prod-yml/Jenkins-prod-Deployment.yml << 'EOF'
+cat > ~/jenkins-yml/Jenkins-Deployment.yml << 'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jenkins-prod
-  namespace: jenkins-prod
+  name: jenkins
+  namespace: jenkins
   labels:
-    app: jenkins-prod
+    app: jenkins
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jenkins-prod
+      app: jenkins
   template:
     metadata:
       labels:
-        app: jenkins-prod
+        app: jenkins
     spec:
       tolerations:
       - effect: NoSchedule
         key: no-pod
         operator: Exists
       nodeSelector:
-        jenkins-prod: jenkins-prod
+        jenkins: jenkins
       containers:
-      - name: jenkins-prod
+      - name: jenkins
         #image: jenkins/jenkins:2.485-jdk21
         image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins:2.485-jdk21
         imagePullPolicy: IfNotPresent
@@ -195,14 +195,14 @@ spec:
         - name: JAVA_OPTS
           value: -Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=true
         volumeMounts:
-        - name: jenkins-home-prod
+        - name: jenkins-home
           mountPath: /var/jenkins_home
         - mountPath: /etc/localtime
           name: localtime
       volumes:
-      - name: jenkins-home-prod
+      - name: jenkins-home
         persistentVolumeClaim:
-          claimName: jenkins-home-prod
+          claimName: jenkins-home
       - name: localtime
         hostPath:
           path: /etc/localtime
@@ -211,8 +211,8 @@ spec:
 apiVersion: v1
 kind:  PersistentVolumeClaim
 metadata:
-  name: jenkins-home-prod
-  namespace: jenkins-prod
+  name: jenkins-home
+  namespace: jenkins
 spec:
   storageClassName: "nfs-storage"
   accessModes: [ReadWriteOnce]
@@ -223,51 +223,51 @@ EOF
 ```
 
 ```shell
-kubectl apply -f ~/jenkins-prod-yml/Jenkins-prod-Deployment.yml
+kubectl apply -f ~/jenkins-yml/Jenkins-Deployment.yml
 ```
 
 ```shell
-cat > ~/jenkins-prod-yml/Jenkins-prod-Ingress.yml << 'EOF'
+cat > ~/jenkins-yml/Jenkins-Ingress.yml << 'EOF'
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: jenkins-prod-ingress
-  namespace: jenkins-prod
+  name: jenkins-ingress
+  namespace: jenkins
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
     nginx.ingress.kubernetes.io/proxy-body-size: '4G'
 spec:
   ingressClassName: nginx
   rules:
-  - host: jenkins-prod.openhhh.com
+  - host: jenkins.openhhh.com
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: jenkins-prod # 将所有请求发送到 jenkins-prod 服务的 8080 端口
+            name: jenkins # 将所有请求发送到 jenkins 服务的 8080 端口
             port:
               number: 8080
   tls:
   - hosts:
-    - jenkins-prod.openhhh.com
-    secretName: jenkins-prod-ingress-tls
+    - jenkins.openhhh.com
+    secretName: jenkins-ingress-tls
 EOF
 ```
 
 ```shell
-kubectl create secret -n jenkins-prod \
-tls jenkins-prod-ingress-tls \
+kubectl create secret -n jenkins \
+tls jenkins-ingress-tls \
 --key=/root/ssl/openhhh.com.key \
 --cert=/root/ssl/openhhh.com.pem
 ```
 
 ```shell
-kubectl apply -f ~/jenkins-prod-yml/Jenkins-prod-Ingress.yml
+kubectl apply -f ~/jenkins-yml/Jenkins-Ingress.yml
 ```
 
-> 访问地址：https://jenkins-prod.openhhh.com
+> 访问地址：https://jenkins.openhhh.com
 >
 > 设置账号密码为：admin、Admin@2024
 
@@ -286,18 +286,18 @@ kubectl apply -f ~/jenkins-prod-yml/Jenkins-prod-Ingress.yml
 11、Role-based Authorization Strategy
 12、DingTalk				   # 钉钉机器人
 
-http://jenkins-prod.jenkins-prod:8080
+http://jenkins.jenkins:8080
 
 https://mirrors.tuna.tsinghua.edu.cn/jenkins/updates/update-center.json
 ```
 
 ```shell
-cat > ~/jenkins-prod-yml/Jenkins-prod-slave-maven-cache.yml << 'EOF'
+cat > ~/jenkins-yml/Jenkins-slave-maven-cache.yml << 'EOF'
 apiVersion: v1
 kind:  PersistentVolumeClaim
 metadata:
-  name: jenkins-prod-slave-maven-cache
-  namespace: jenkins-prod
+  name: jenkins-slave-maven-cache
+  namespace: jenkins
 spec:
   storageClassName: "nfs-storage"
   accessModes: [ReadWriteOnce]
@@ -308,12 +308,12 @@ EOF
 ```
 
 ```shell
-cat > ~/jenkins-prod-yml/Jenkins-prod-slave-node-cache.yml << 'EOF'
+cat > ~/jenkins-yml/Jenkins-slave-node-cache.yml << 'EOF'
 apiVersion: v1
 kind:  PersistentVolumeClaim
 metadata:
-  name: jenkins-prod-slave-node-cache
-  namespace: jenkins-prod
+  name: jenkins-slave-node-cache
+  namespace: jenkins
 spec:
   storageClassName: "nfs-storage"
   accessModes: [ReadWriteOnce]
@@ -324,12 +324,12 @@ EOF
 ```
 
 ```shell
-cat > ~/jenkins-prod-yml/Jenkins-prod-slave-golang-cache.yml << 'EOF'
+cat > ~/jenkins-yml/Jenkins-slave-golang-cache.yml << 'EOF'
 apiVersion: v1
 kind:  PersistentVolumeClaim
 metadata:
-  name: jenkins-prod-slave-golang-cache
-  namespace: jenkins-prod
+  name: jenkins-slave-golang-cache
+  namespace: jenkins
 spec:
   storageClassName: "nfs-storage"
   accessModes: [ReadWriteOnce]
@@ -338,12 +338,12 @@ spec:
       storage: 2Ti
 EOF
 
-cat > ~/jenkins-prod-yml/Jenkins-prod-slave-go-build-cache.yml << 'EOF'
+cat > ~/jenkins-yml/Jenkins-slave-go-build-cache.yml << 'EOF'
 apiVersion: v1
 kind:  PersistentVolumeClaim
 metadata:
-  name: jenkins-prod-slave-go-build-cache
-  namespace: jenkins-prod
+  name: jenkins-slave-go-build-cache
+  namespace: jenkins
 spec:
   storageClassName: "nfs-storage"
   accessModes: [ReadWriteOnce]
@@ -368,7 +368,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: jenkins-slave
-  namespace: jenkins-prod
+  namespace: jenkins
 spec:
   tolerations:
   - key: "no-pod"
