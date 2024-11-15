@@ -531,7 +531,7 @@ kubectl apply -f ~/calico-yml/calico.yaml
 ### 5、coredns 解析测试是否正常
 
 ```shell
-[root@k8s-master ~]# kubectl run -it --rm dns-test --image=busybox:1.36.1 sh
+[root@k8s-master ~]# kubectl run -it --rm dns-test --image=busybox:1.37.0 sh
 If you don't see a command prompt, try pressing enter.
 / # nslookup kubernetes
 Server:    10.96.0.10
@@ -543,9 +543,9 @@ Address 1: 10.96.0.1 kubernetes.default.svc.cluster.local
 ```
 
 ```shell
-# kubectl run -it --rm dns-test --image=busybox:1.36.1 sh
+# kubectl run -it --rm dns-test --image=busybox:1.37.0 sh
 
-kubectl run -it --rm dns-test --image=ccr.ccs.tencentyun.com/huanghuanhui/busybox:1.36.1 sh
+kubectl run -it --rm dns-test --image=ccr.ccs.tencentyun.com/huanghuanhui/busybox:1.37.0 sh
 ```
 
 ```shell
