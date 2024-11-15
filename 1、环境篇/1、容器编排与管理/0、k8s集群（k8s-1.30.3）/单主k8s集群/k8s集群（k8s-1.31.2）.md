@@ -494,7 +494,7 @@ cd ~/calico-yml && wget https://ghp.ci/https://github.com/projectcalico/calico/r
   value: "k8s,bgp"
 # 下面添加
   - name: IP_AUTODETECTION_METHOD
-    value: "interface=ens33,ens160"
+    value: "interface=eth0,ens33,ens160"
     # ens33为本地网卡名字（自己机器啥网卡就改啥）
     
 3 修改镜像仓库地址
@@ -512,7 +512,7 @@ sed -i 's/# \(\s*value: "10.244.0.0\/16"\)/\1/' calico.yaml
 # 2 指定网卡（ens33为本地网卡名字（自己机器啥网卡就改啥））
 sed -i '/value: "k8s,bgp"/a \            - name: IP_AUTODETECTION_METHOD' \calico.yaml
 
-sed -i '/- name: IP_AUTODETECTION_METHOD/a \              value: "interface=ens33,ens160"' \calico.yaml
+sed -i '/- name: IP_AUTODETECTION_METHOD/a \              value: "interface=eth0,ens33,ens160"' \calico.yaml
 ```
 
 ```shell
