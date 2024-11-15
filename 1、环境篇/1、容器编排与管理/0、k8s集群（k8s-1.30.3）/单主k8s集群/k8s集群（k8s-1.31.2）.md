@@ -386,7 +386,7 @@ mkdir -p ~/kubeadm_init && cd ~/kubeadm_init
 kubeadm config print init-defaults > kubeadm-init.yaml
 
 cat > ~/kubeadm_init/kubeadm-init.yaml << EOF
-apiVersion: kubeadm.k8s.io/v1beta3
+apiVersion: kubeadm.k8s.io/v1beta4
 bootstrapTokens:
 - groups:
   - system:bootstrappers:kubeadm:default-node-token
@@ -407,9 +407,8 @@ nodeRegistration:
   - effect: NoSchedule
     key: node-role.kubernetes.io/k8s-master
 ---
-apiServer:
-  timeoutForControlPlane: 4m0s
-apiVersion: kubeadm.k8s.io/v1beta3
+apiServer: {}
+apiVersion: kubeadm.k8s.io/v1beta4
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
 controllerManager: {}
@@ -419,7 +418,7 @@ etcd:
     dataDir: /var/lib/etcd
 imageRepository: registry.aliyuncs.com/google_containers
 kind: ClusterConfiguration
-kubernetesVersion: v1.30.3
+kubernetesVersion: v1.31.2
 networking:
   dnsDomain: cluster.local
   podSubnet: 10.244.0.0/16
