@@ -17,6 +17,8 @@ spec:
       labels:
         app: java-xxx
     spec:
+      imagePullSecrets:
+      - name: jingsocial-image-secret
       containers:
       - args:
         - -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
