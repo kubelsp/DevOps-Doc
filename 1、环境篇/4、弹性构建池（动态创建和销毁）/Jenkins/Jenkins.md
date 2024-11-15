@@ -1,14 +1,14 @@
 ### 15、jenkins
 
-k8s手撕yml方式部署最新版 Jenkins-2.484（jdk-21版）（jenkins-prod）
+k8s手撕yml方式部署最新版 Jenkins-2.485（jdk-21版）（jenkins-prod）
 
 > https://github.com/jenkinsci/jenkins
 >
 >https://hub.docker.com/r/jenkins/jenkins/
 >
-> k8s-v1.30.3
+> k8s-v1.31.2
 >
-> Jenkins-2.484
+> Jenkins-2.485
 
 ```shell
 mkdir -p ~/jenkins-prod-yml
@@ -167,8 +167,8 @@ spec:
         jenkins-prod: jenkins-prod
       containers:
       - name: jenkins-prod
-        #image: jenkins/jenkins:2.484-jdk21
-        image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins:2.484-jdk21
+        #image: jenkins/jenkins:2.485-jdk21
+        image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins:2.485-jdk21
         imagePullPolicy: IfNotPresent
         resources:
           limits:
