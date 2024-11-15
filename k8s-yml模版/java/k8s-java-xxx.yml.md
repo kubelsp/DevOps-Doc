@@ -29,8 +29,7 @@ spec:
       imagePullSecrets:
         - name: image-secret
       containers:
-      - command:
-        - java
+      - args:
         - -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
         - -Xss512k
         - -XX:+UseG1GC
@@ -53,6 +52,18 @@ spec:
         - -jar
         - /usr/local/src/${AppName}.jar
         - --spring.profiles.active=live
+        - command:
+        - java
+        env:
+        - name: TZ
+          value: Asia/Shanghai
+        - name: NACOS_MICRO_SERVICE_CONFIG_GROUP
+          value: operation
+        - name: NACOS_MICRO_SERVICE_CONFIG_DATA_ID
+          value: operation-application-api-config
+        envFrom:
+        - configMapRef:
+            name: nacos-connection-config
         image: ccr.ccs.tencentyun.com/huanghuanhui/${AppName}:8f897fd-1
         imagePullPolicy: IfNotPresent
         name: ${AppName}
