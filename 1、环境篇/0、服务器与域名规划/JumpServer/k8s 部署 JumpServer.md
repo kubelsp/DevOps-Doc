@@ -381,12 +381,14 @@ metadata:
   name: jumpserver-ingress
   namespace: jumpserver
   annotations:
+    cert-manager.io/cluster-issuer: prod-issuer 
+    acme.cert-manager.io/http01-edit-in-place: "true" 
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
     nginx.ingress.kubernetes.io/proxy-body-size: '4G'
 spec:
   ingressClassName: nginx
   rules:
-  - host: jumpserver.huanghuanhui.cloud
+  - host: jumpserver.openhhh.com
     http:
       paths:
       - path: /
@@ -398,7 +400,7 @@ spec:
               number: 80
   tls:
   - hosts:
-    - jumpserver.huanghuanhui.cloud
+    - jumpserver.openhhh.com
     secretName: jumpserver-ingress-tls
 EOF
 `````
@@ -406,15 +408,15 @@ EOF
 `````shell
 kubectl create secret -n jumpserver \
 tls jumpserver-ingress-tls \
---key=/root/ssl/huanghuanhui.cloud_nginx/huanghuanhui.cloud.key \
---cert=/root/ssl/huanghuanhui.cloud_nginx/huanghuanhui.cloud_bundle.crt
+--key=/root/ssl/openhhh.com.key \
+--cert=/root/ssl/openhhh.com.pem
 `````
 
 `````shell
 kubectl apply -f ~/jumpserver-yml/jumpserver-Ingress.yml 
 `````
 
-> 访问地址：jumpserver.huanghuanhui.cloud
+> 访问地址：jumpserver.openhhh.com
 >
 > 用户名：admin
 > 设置账号密码为：admin 、Admin@2024
