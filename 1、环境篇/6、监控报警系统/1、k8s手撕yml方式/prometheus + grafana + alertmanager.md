@@ -2,7 +2,7 @@
 
 k8s 手撕方式安装 prometheus + grafana + alertmanager
 
-> k8s版本：k8s-1.30.3
+> k8s版本：k8s-1.31.2
 >
 > prometheus版本：v2.53.1
 >
@@ -783,6 +783,8 @@ metadata:
   name: prometheus-ingress
   namespace: monitoring
   annotations:
+    cert-manager.io/cluster-issuer: prod-issuer 
+    acme.cert-manager.io/http01-edit-in-place: "true" 
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
     nginx.ingress.kubernetes.io/proxy-body-size: '4G'
 spec:
@@ -1392,6 +1394,8 @@ metadata:
   name: consul-ingress
   namespace: monitoring
   annotations:
+    cert-manager.io/cluster-issuer: prod-issuer 
+    acme.cert-manager.io/http01-edit-in-place: "true" 
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
     nginx.ingress.kubernetes.io/proxy-body-size: '4G'
 spec:
@@ -1416,10 +1420,10 @@ EOF
 ```
 
 ```shell
-kubectl create secret -n monitoring \
-tls consul-ingress-tls \
---key=/root/ssl/openhhh.com.key \
---cert=/root/ssl/openhhh.com.pem
+#kubectl create secret -n monitoring \
+#tls consul-ingress-tls \
+#--key=/root/ssl/openhhh.com.key \
+#--cert=/root/ssl/openhhh.com.pem
 ```
 
 ```shell
@@ -1916,6 +1920,8 @@ metadata:
   name: grafana-ingress
   namespace: monitoring
   annotations:
+    cert-manager.io/cluster-issuer: prod-issuer 
+    acme.cert-manager.io/http01-edit-in-place: "true" 
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
     nginx.ingress.kubernetes.io/proxy-body-size: '4G'
 spec:
@@ -1940,10 +1946,10 @@ EOF
 ```
 
 ```shell
-kubectl create secret -n monitoring \
-tls grafana-ingress-tls \
---key=/root/ssl/openhhh.com.key \
---cert=/root/ssl/openhhh.com.pem
+#kubectl create secret -n monitoring \
+#tls grafana-ingress-tls \
+#--key=/root/ssl/openhhh.com.key \
+#--cert=/root/ssl/openhhh.com.pem
 ```
 
 ```shell
@@ -2193,6 +2199,8 @@ metadata:
   name: alertmanager-ingress
   namespace: monitoring
   annotations:
+    cert-manager.io/cluster-issuer: prod-issuer 
+    acme.cert-manager.io/http01-edit-in-place: "true" 
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
     nginx.ingress.kubernetes.io/proxy-body-size: '4G'
 spec:
@@ -2217,10 +2225,10 @@ EOF
 ```
 
 ```shell
-kubectl create secret -n monitoring \
-tls alertmanager-ingress-tls \
---key=/root/ssl/openhhh.com.key \
---cert=/root/ssl/openhhh.com.pem
+#kubectl create secret -n monitoring \
+#tls alertmanager-ingress-tls \
+#--key=/root/ssl/openhhh.com.key \
+#--cert=/root/ssl/openhhh.com.pem
 ```
 
 ```shell
