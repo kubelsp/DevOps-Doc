@@ -118,10 +118,10 @@ EOF
 ```
 
 ```shell
-kubectl create secret -n gitlab \
-tls gitlab-ingress-tls \
---key=/root/ssl/openhhh.com.key \
---cert=/root/ssl/openhhh.com.pem
+#kubectl create secret -n gitlab \
+#tls gitlab-ingress-tls \
+#--key=/root/ssl/openhhh.com.key \
+#--cert=/root/ssl/openhhh.com.pem
 ```
 
 ```shell

@@ -148,10 +148,10 @@ EOF
 ```
 
 ```shell
-kubectl create secret -n kuboard \
-tls kuboard-ingress-tls \
---key=/root/ssl/openhhh.com.key \
---cert=/root/ssl/openhhh.com.pem
+#kubectl create secret -n kuboard \
+#tls kuboard-ingress-tls \
+#--key=/root/ssl/openhhh.com.key \
+#--cert=/root/ssl/openhhh.com.pem
 ```
 
 ```shell

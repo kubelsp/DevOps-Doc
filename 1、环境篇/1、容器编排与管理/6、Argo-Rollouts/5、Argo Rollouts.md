@@ -94,10 +94,10 @@ kubectl create secret generic argo-rollouts-dashboard-auth --from-file=/root/arg
 ```
 
 ```shell
-kubectl create secret -n argo-rollouts \
-tls argo-rollouts-dashboard-ingress-tls \
---key=/root/ssl/openhhh.com.key \
---cert=/root/ssl/openhhh.com.pem
+#kubectl create secret -n argo-rollouts \
+#tls argo-rollouts-dashboard-ingress-tls \
+#--key=/root/ssl/openhhh.com.key \
+#--cert=/root/ssl/openhhh.com.pem
 ```
 
 ```shell
