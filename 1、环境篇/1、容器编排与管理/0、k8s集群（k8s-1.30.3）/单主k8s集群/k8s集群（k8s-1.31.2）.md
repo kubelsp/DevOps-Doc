@@ -469,7 +469,7 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 >
 > https://github.com/projectcalico/calico
 
-> 这里k8s-1.31.2，所以使用calico-v3.27.3版本（版本对应很关键）
+> 这里k8s-1.31.2，所以使用calico-v3.29.0版本（版本对应很关键）
 
 ```shell
 # mkdir -p ~/calico-yml
