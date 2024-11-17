@@ -269,7 +269,7 @@ containerd config default | sudo tee /etc/containerd/config.toml
 sed -ri 's#SystemdCgroup = false#SystemdCgroup = true#' /etc/containerd/config.toml
 
 # 更改sandbox_image
-sed -ri 's#registry.k8s.io\/pause:3.8#registry.aliyuncs.com\/google_containers\/pause:3.9#' /etc/containerd/config.toml
+sed -ri 's#registry.k8s.io\/pause:3.8#registry.aliyuncs.com\/google_containers\/pause:3.10#' /etc/containerd/config.toml
 
 # 添加镜像加速
 # https://github.com/DaoCloud/public-image-mirror
