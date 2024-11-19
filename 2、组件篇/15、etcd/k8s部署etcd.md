@@ -5,7 +5,7 @@ kubectl create ns etcd
 ````
 
 ``````shell
-cat > etcd.yml << 'EOF'
+cat > ~/etcd-yml/etcd.yml << 'EOF'
 ---
 apiVersion: v1
 kind: Service
