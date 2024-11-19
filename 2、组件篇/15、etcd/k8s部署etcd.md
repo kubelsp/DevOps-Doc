@@ -132,5 +132,18 @@ spec:
 EOF
 ``````
 
+````shell
+kubectl apply -f ~/etcd-yml/etcd.yml
+````
 
+````shell
+$ kubectl exec -it etcd-0 -- etcdctl member list -wtable
++------------------+---------+--------+-------------------------+-------------------------+------------+
+|        ID        | STATUS  |  NAME  |       PEER ADDRS        |      CLIENT ADDRS       | IS LEARNER |
++------------------+---------+--------+-------------------------+-------------------------+------------+
+| 91ac39ca9e4a9f13 | started | etcd-1 | http://etcd-1.etcd:2380 | http://etcd-1.etcd:2379 |      false |
+| 937595d35e7537ba | started | etcd-2 | http://etcd-2.etcd:2380 | http://etcd-2.etcd:2379 |      false |
+| dcf132440dd8705d | started | etcd-0 | http://etcd-0.etcd:2380 | http://etcd-0.etcd:2379 |      false |
++------------------+---------+--------+-------------------------+-------------------------+------------+
+````
 
