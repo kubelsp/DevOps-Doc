@@ -29,8 +29,8 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  namespace: etcd
   name: etcd
+  namespace: etcd
 spec:
   serviceName: etcd
   replicas: 3
