@@ -1,3 +1,9 @@
+````shell
+mkdir -p ~/etcd-yml
+
+kubectl create ns etcd
+````
+
 ``````shell
 cat > etcd.yml << 'EOF'
 ---
@@ -5,7 +11,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: etcd
-  namespace: default
+  namespace: etcd
 spec:
   type: ClusterIP
   clusterIP: None
@@ -23,7 +29,7 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  namespace: default
+  namespace: etcd
   name: etcd
 spec:
   serviceName: etcd
@@ -122,7 +128,7 @@ spec:
       storageClassName: nfs-storage
       resources:
         requests:
-          storage: 1Gi
+          storage: 100Gi
 EOF
 ``````
 
