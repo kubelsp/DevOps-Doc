@@ -137,7 +137,7 @@ kubectl apply -f ~/etcd-yml/etcd.yml
 ````
 
 ````shell
-$ kubectl exec -it etcd-0 -- etcdctl member list -wtable
+$ kubectl -n etcd exec -it etcd-0 -- etcdctl member list -wtable
 +------------------+---------+--------+-------------------------+-------------------------+------------+
 |        ID        | STATUS  |  NAME  |       PEER ADDRS        |      CLIENT ADDRS       | IS LEARNER |
 +------------------+---------+--------+-------------------------+-------------------------+------------+
