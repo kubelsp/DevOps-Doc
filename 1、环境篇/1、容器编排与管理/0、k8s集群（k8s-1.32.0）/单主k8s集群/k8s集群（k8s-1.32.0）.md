@@ -1,23 +1,23 @@
-### 0、k8s集群（k8s-1.31.2）
+### 0、k8s集群（k8s-1.32.0）
 
 [TOC]
 
-containerd-1.7.23 + k8s-1.31.2（最新）（kubeadm方式）（containerd容器运行时版）
+containerd-1.7.23 + k8s-1.32.0（最新）（kubeadm方式）（containerd容器运行时版）
 
-> kubeadm方式安装最新版k8s-1.31.2（containerd容器运行时）
+> kubeadm方式安装最新版k8s-1.32.0（containerd容器运行时）
 >
-> containerd-1.7.23 + k8s-1.31.2（最新）（kubeadm方式）
+> containerd-1.7.23 + k8s-1.32.0（最新）（kubeadm方式）
 
 > containerd-1.7.23
 >
-> k8s-1.31.2
+> k8s-1.32.0
 
-> - k8s-master（rocky-9.4）（4c8g-200g）
-> - k8s-node1（rocky-9.4）（8c16g-200g）
-> - k8s-node2（rocky-9.4）（8c16g-200g）
-> - k8s-node3（rocky-9.4）（8c16g-200g）
+> - k8s-master（rocky-9.5）（4c8g-200g）
+> - k8s-node1（rocky-9.5）（8c16g-200g）
+> - k8s-node2（rocky-9.5）（8c16g-200g）
+> - k8s-node3（rocky-9.5）（8c16g-200g）
 
-### 0、环境准备（rocky-9.4 环境配置+调优）
+### 0、环境准备（rocky-9.5 环境配置+调优）
 
 ```shell
 # 颜色
@@ -239,7 +239,7 @@ grep -vE "^\s*#" /etc/security/limits.conf
 ulimit -a
 ```
 
-### 1、安装containerd-1.7.23（官方源、腾讯源）(rocky-9.4 )
+### 1、安装containerd-1.7.23（官方源、腾讯源）(rocky-9.5 )
 
 ```shell
 # wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
@@ -350,14 +350,14 @@ debug: false
 EOF
 ```
 
-### 2、安装k8s（kubeadm-1.31.2、kubelet-1.31.2、kubectl-1.31.2）（官方源）(rocky-9.4 )
+### 2、安装k8s（kubeadm-1.32.0、kubelet-1.32.0、kubectl-1.32.0）（官方源）(rocky-9.5 )
 
 ```shell
 # 官方源
 cat > /etc/yum.repos.d/kubernetes.repo << 'EOF'
 [kubernetes]
 name=Kubernetes
-baseurl=https://pkgs.k8s.io/core:/stable:/v1.31/rpm/
+baseurl=https://pkgs.k8s.io/core:/stable:/v1.32/rpm/
 enabled=1
 gpgcheck=0
 EOF
@@ -366,19 +366,19 @@ EOF
 cat > /etc/yum.repos.d/kubernetes.repo << 'EOF'
 [kubernetes]
 name=Kubernetes
-baseurl=https://mirrors.cloud.tencent.com/kubernetes_new/core:/stable:/v1.31/rpm/
+baseurl=https://mirrors.cloud.tencent.com/kubernetes_new/core:/stable:/v1.32/rpm/
 enabled=1
 gpgcheck=0
 EOF
 
 yum makecache
 
-yum -y install kubeadm-1.31.2 kubelet-1.31.2 kubectl-1.31.2
+yum -y install kubeadm-1.32.0 kubelet-1.32.0 kubectl-1.32.0
 
 systemctl enable --now kubelet
 ```
 
-### 3、初始化 k8s-1.31.2 集群
+### 3、初始化 k8s-1.32.0 集群
 
 ```shell
 mkdir -p ~/kubeadm_init && cd ~/kubeadm_init
@@ -418,7 +418,7 @@ etcd:
     dataDir: /var/lib/etcd
 imageRepository: registry.aliyuncs.com/google_containers
 kind: ClusterConfiguration
-kubernetesVersion: v1.31.2
+kubernetesVersion: v1.32.0
 networking:
   dnsDomain: cluster.local
   podSubnet: 10.244.0.0/16
@@ -469,7 +469,7 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 >
 > https://github.com/projectcalico/calico
 
-> 这里k8s-1.31.2，所以使用calico-v3.29.0版本（版本对应很关键）
+> 这里k8s-1.32.0，所以使用calico-v3.29.0版本（版本对应很关键）
 
 ```shell
 # mkdir -p ~/calico-yml
