@@ -246,3 +246,9 @@ kubectl create configmap kubeconfig --from-file=config -n streampark
 kubectl apply -f ~/streampark-yml/streampark.yml
 ```
 
+===
+
+````shell
+  docker run -d -p 9999:10000 apache/streampark:2.1.5
+````
+
