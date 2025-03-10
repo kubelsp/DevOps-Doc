@@ -1,4 +1,4 @@
-### 0、高可用k8s集群（k8s-1.32.2）
+## 高可用k8s集群（k8s-1.32.2）
 
 [TOC]
 
@@ -12,21 +12,21 @@ containerd-1.6.31 + k8s-1.32.2（最新）（kubeadm方式）（containerd容器
 >
 > k8s-1.32.2
 
-> - k8s-master1（centos-7.9）（4c8g-200g）
-> - k8s-master2（centos-7.9）（4c8g-200g）
-> - k8s-master3（centos-7.9）（4c8g-200g）
-> - k8s-node1（centos-7.9）（8c16g-200g）
-> - k8s-node2（rocky-9.3）（8c16g-200g）
-> - k8s-node3（rocky-9.3）（8c16g-200g）
+> - k8s-master1（rockylinux-9.5）（4c8g-200g）
+> - k8s-master2（rockylinux-9.5）（4c8g-200g）
+> - k8s-master3（rockylinux-9.5）（4c8g-200g）
+> - k8s-node1（rockylinux-9.5）（8c16g-200g）
+> - k8s-node2（rockylinux-9.5）（8c16g-200g）
+> - k8s-node3（rockylinux-9.5）（8c16g-200g）
 
 主机规划
 
-|             |      ip      |                  |
-| :---------: | :----------: | :--------------: |
-| k8s-master1 | 192.168.1.11 | nginx+keepalived |
-| k8s-master2 | 192.168.1.12 | nginx+keepalived |
-| k8s-master3 | 192.168.1.13 | nginx+keepalived |
-|     vip     | 192.168.1.10 |                  |
+|             |      ip      |          |
+| :---------: | :----------: | :------: |
+| k8s-master1 | 192.168.1.11 | kube-vip |
+| k8s-master2 | 192.168.1.12 | kube-vip |
+| k8s-master3 | 192.168.1.13 | kube-vip |
+|     vip     | 192.168.1.10 |          |
 
 网络分配
 
@@ -36,7 +36,7 @@ containerd-1.6.31 + k8s-1.32.2（最新）（kubeadm方式）（containerd容器
 | Service网络 |  10.96.0.0/12  |
 |   Pod网络   | 10.244.0.0/16  |
 
-### 0、环境准备（centos-7.9、rocky-9.3 环境配置+调优）
+### 0、环境准备（rockylinux-9.5 环境配置+调优）
 
 ```shell
 # 颜色
@@ -44,23 +44,24 @@ echo "PS1='\[\033[35m\][\[\033[00m\]\[\033[31m\]\u\[\033[33m\]\[\033[33m\]@\[\03
 
 echo 'PS1="[\[\e[33m\]\u\[\e[0m\]\[\e[31m\]@\[\e[0m\]\[\e[35m\]\h\[\e[0m\]:\[\e[32m\]\w\[\e[0m\]] \[\e[33m\]\t\[\e[0m\] \[\e[31m\]Power\[\e[0m\]=\[\e[32m\]\!\[\e[0m\] \[\e[35m\]^0^\[\e[0m\]\n\[\e[95m\]公主请输命令^0^\[\e[0m\] \[\e[36m\]\\$\[\e[0m\] "' >> ~/.bashrc && source ~/.bashrc
 
-# 0、centos7 环境配置
+# 0、rockylinux-9.5 环境配置
+
+# 腾讯源
+sed -e 's|^mirrorlist=|#mirrorlist=|g' \
+    -e 's|^#baseurl=http://dl.rockylinux.org/$contentdir|baseurl=https://mirrors.cloud.tencent.com/rocky|g' \
+    -i.bak \
+    /etc/yum.repos.d/[Rr]ocky*.repo
+    
+yum clean all
+yum makecache
+
+yum -y install epel-release
+
 # 安装 vim
 yum -y install vim wget net-tools
 
 # 行号
 echo "set nu" >> /root/.vimrc
-
-# 搜索关键字高亮
-sed -i "8calias grep='grep --color'" /root/.bashrc
-
-# 腾讯源
-cp /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo-bak
-wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.cloud.tencent.com/repo/centos7_base.repo
-wget -O /etc/yum.repos.d/CentOS-Epel.repo http://mirrors.cloud.tencent.com/repo/epel-7.repo
-
-yum clean all
-yum makecache
 ```
 
 ```shell
@@ -76,6 +77,7 @@ hostnamectl set-hostname k8s-node3 && su -
 ```shell
 # 2、添加hosts解析
 cat >> /etc/hosts << EOF
+192.168.1.10 k8s-vip kube-vip
 192.168.1.11 k8s-master1
 192.168.1.12 k8s-master2
 192.168.1.13 k8s-master3
@@ -105,46 +107,14 @@ sed -i 's/.*swap.*/#&/g' /etc/fstab # 永久关闭
 ```
 
 ```shell
-# 6、升级内核为5.4版本(需重启系统生效)
-# https://elrepo.org/tiki/kernel-lt
-# https://elrepo.org/linux/kernel/el7/x86_64/RPMS/
-
-rpm -Uvh http://www.elrepo.org/elrepo-release-7.0-6.el7.elrepo.noarch.rpm
-
-yum --disablerepo="*" --enablerepo="elrepo-kernel" list available
-
-yum --enablerepo=elrepo-kernel install -y kernel-lt
-
-grub2-set-default 0
-```
-
-```shell
-wget https://gitee.com/kubelsp/upload/raw/master/kernel-lt/5.4/kernel-lt-5.4.274-1.el7.elrepo.x86_64.rpm
-
-yum -y install kernel-lt-5.4.274-1.el7.elrepo.x86_64.rpm
-
-grub2-set-default 0
-```
-
-```shell
-# 这里先重启再继续
-# reboot
-```
-
-```shell
-# 7、关闭防火墙、清空iptables规则
+# 6、关闭防火墙、清空iptables规则
 systemctl disable firewalld && systemctl stop firewalld
 
 iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X && iptables -P FORWARD ACCEPT
 ```
 
 ```shell
-# 8、关闭 NetworkManager
-systemctl disable NetworkManager && systemctl stop NetworkManager
-```
-
-```shell
-# 9、加载IPVS模块
+# 7、加载IPVS模块
 yum -y install ipset ipvsadm
 
 mkdir -p /etc/sysconfig/modules
@@ -162,7 +132,7 @@ chmod 755 /etc/sysconfig/modules/ipvs.modules && bash /etc/sysconfig/modules/ipv
 ```
 
 ```shell
-# 10、开启br_netfilter、ipv4 路由转发
+# 8、开启br_netfilter、ipv4 路由转发
 cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
 overlay
 br_netfilter
@@ -189,7 +159,7 @@ sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables ne
 ```
 
 ```shell
-# 11、内核调优
+# 9、内核调优
 cat > /etc/sysctl.d/99-sysctl.conf << 'EOF'
 # sysctl settings are defined through files in
 # /usr/lib/sysctl.d/, /run/sysctl.d/, and /etc/sysctl.d/.
@@ -272,7 +242,7 @@ sudo sysctl --system
 ```
 
 ```shell
-# 12、设置资源配置文件
+# 10、设置资源配置文件
 cat >> /etc/security/limits.conf << 'EOF'
 * soft nofile 100001
 * hard nofile 100002
@@ -287,247 +257,32 @@ root hard nofile 100002
 EOF
  
 grep -vE "^\s*#" /etc/security/limits.conf
-
+ 
 ulimit -a
 ```
 
-### 1、nginx + keepalived（负载均衡+高可用）
+### 1、安装containerd-1.7.23（官方源、腾讯源）(rockylinux-9.5 )
 
-###### 1.1、nginx
+```shell
+# 官方源
+# wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
+
+# yum makecache
+```
 
 ````shell
-cat > /etc/yum.repos.d/nginx.repo << 'EOF'
-[nginx-stable]
-name=nginx stable repo
-baseurl=http://nginx.org/packages/centos/$releasever/$basearch
-gpgcheck=1
-enabled=1
-gpgkey=https://nginx.org/keys/nginx_signing.key
-module_hotfixes=true
-EOF
-````
-
-```shell
-yum install nginx -y
-
-mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf-bak
-mv /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf-bak
-```
-
-```shell
-cat > /etc/nginx/nginx.conf << "EOF"
-user  nginx;
-worker_processes  auto;
-
-error_log  /var/log/nginx/error.log notice;
-pid        /var/run/nginx.pid;
-
-
-events {
-    worker_connections  10240;
-}
-
-stream {
-    log_format  main  '$remote_addr $upstream_addr - [$time_local] $status $upstream_bytes_sent';
-    access_log  /var/log/nginx/k8s-access.log  main;
-    upstream k8s-apiserver {
-       server 192.168.1.11:6443 weight=5 max_fails=1 fail_timeout=3s;  	#k8s-master1的IP和6443端口
-       server 192.168.1.12:6443 weight=5 max_fails=1 fail_timeout=3s;  	#k8s-master2的IP和6443端口
-       server 192.168.1.13:6443 weight=5 max_fails=1 fail_timeout=3s;  	#k8s-master3的IP和6443端口
-    }
-    server {
-       listen 9443; #监听的是9443端口
-       proxy_pass k8s-apiserver; #使用proxy_pass模块进行反向代理
-    }
-}
-
-http {
-    include       /etc/nginx/mime.types;
-    default_type  application/octet-stream;
-
-    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-                      '$status $body_bytes_sent "$http_referer" '
-                      '"$http_user_agent" "$http_x_forwarded_for"';
-
-    access_log  /var/log/nginx/access.log  main;
-
-    sendfile        on;
-    #tcp_nopush     on;
-
-    keepalive_timeout  65;
-
-    #gzip  on;
-
-    include /etc/nginx/conf.d/*.conf;
-}
-EOF
-```
-
-```shell
-systemctl enable --now nginx
-systemctl status nginx
-netstat -tnlp |grep 9443
-```
-
-###### 1.2、keepalived
-
-```shell
-yum -y install keepalived
-
-cp /etc/keepalived/keepalived.conf /etc/keepalived/keepalived.conf-bak
-```
-
-k8s-master1（keepalived的MASTER配置)
-
-```shell
-cat > /etc/keepalived/keepalived.conf << EOF
-! Configuration File for keepalived
-
-global_defs {
-   router_id LVS_k8s
-}
-
-vrrp_script check_nginx {
-    script "/etc/keepalived/check_nginx.sh"
-    interval 3
-    weight -2
-    fall 10
-    rise 2
-}
-
-vrrp_instance VI_1 {
-    state MASTER # master
-    interface ens33# 网卡
-    virtual_router_id 51
-    priority 100 # 权重
-    advert_int 1
-    authentication {
-        auth_type PASS
-        auth_pass 1111
-    }
-    virtual_ipaddress {
-        192.168.1.10 # vip
-    }
-    track_script {
-        check_nginx
-    }
-}
-EOF
-```
-
-k8s-master2（keepalived的BACKUP配置）
-
-````shell
-cat > /etc/keepalived/keepalived.conf << EOF
-! Configuration File for keepalived
-
-global_defs {
-   router_id LVS_k8s
-}
-
-vrrp_script check_nginx {
-    script "/etc/keepalived/check_nginx.sh"
-    interval 3
-    weight -2
-    fall 10
-    rise 2
-}
-
-vrrp_instance VI_1 {
-    state BACKUP # slave
-    interface ens33 # 网卡
-    virtual_router_id 51
-    priority 90 # 权重
-    advert_int 1
-    authentication {
-        auth_type PASS
-        auth_pass 1111
-    }
-    virtual_ipaddress {
-        192.168.1.10 # vip
-    }
-    track_script {
-        check_nginx
-    }
-}
-EOF
-````
-
-k8s-master3（keepalived的BACKUP配置）
-
-````shell
-cat > /etc/keepalived/keepalived.conf << EOF
-! Configuration File for keepalived
-
-global_defs {
-   router_id LVS_k8s
-}
-
-vrrp_script check_nginx {
-    script "/etc/keepalived/check_nginx.sh"
-    interval 3
-    weight -2
-    fall 10
-    rise 2
-}
-
-vrrp_instance VI_1 {
-    state BACKUP # slave
-    interface ens33 # 网卡
-    virtual_router_id 51
-    priority 80 # 权重
-    advert_int 1
-    authentication {
-        auth_type PASS
-        auth_pass 1111
-    }
-    virtual_ipaddress {
-        192.168.1.10 # vip
-    }
-    track_script {
-        check_nginx
-    }
-}
-EOF
-````
-
-```shell
-systemctl enable --now keepalived
-
-systemctl status keepalived
-```
-
-```shell
-cat > /etc/keepalived/check_nginx.sh << 'EOF'
-#!/bin/bash
-# NGINX down
-num=`ps -ef | grep nginx | awk '{print $1}' | grep nginx | wc -l`
-if [ $num -eq 0 ];then
-    systemctl start nginx
-    sleep 1
-    if [ `ps -ef | grep nginx | awk '{print $1}' | grep nginx | wc -l` -eq 0 ];then
-    systemctl stop keepalived
-    fi
-fi
-EOF
-
-chmod +x /etc/keepalived/check_nginx.sh
-```
-
-### 2、安装containerd-1.6.31（官方源）(centos-7.9、rocky-9.3 )
-
-```shell
-wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
+# 腾讯源
+wget -O /etc/yum.repos.d/docker-ce.repo https://mirrors.cloud.tencent.com/docker-ce/linux/centos/docker-ce.repo
 
 yum makecache
-```
+````
 
 ```shell
 yum list containerd.io --showduplicates | sort -r
 ```
 
 ```shell
-yum -y install containerd.io-1.6.31
+yum -y install containerd.io-1.7.23
 ```
 
 ```shell
@@ -537,7 +292,7 @@ containerd config default | sudo tee /etc/containerd/config.toml
 sed -ri 's#SystemdCgroup = false#SystemdCgroup = true#' /etc/containerd/config.toml
 
 # 更改sandbox_image
-sed -ri 's#registry.k8s.io\/pause:3.6#registry.aliyuncs.com\/google_containers\/pause:3.9#' /etc/containerd/config.toml
+sed -ri 's#registry.k8s.io\/pause:3.8#registry.aliyuncs.com\/google_containers\/pause:3.10#' /etc/containerd/config.toml
 
 # 添加镜像加速
 # https://github.com/DaoCloud/public-image-mirror
@@ -618,208 +373,35 @@ debug: false
 EOF
 ```
 
-### 3、安装k8s（kubeadm-1.30.0、kubelet-1.30.0、kubectl-1.30.0）（官方源）(centos-7.9、rocky-9.3 )
+### 2、安装k8s（kubeadm-1.32.0、kubelet-1.32.0、kubectl-1.32.0）（官方源）(rockylinux-9.5 )
 
 ```shell
+# 官方源
 cat > /etc/yum.repos.d/kubernetes.repo << 'EOF'
 [kubernetes]
 name=Kubernetes
-baseurl=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/
+baseurl=https://pkgs.k8s.io/core:/stable:/v1.32/rpm/
+enabled=1
+gpgcheck=0
+EOF
+
+# 腾讯源
+cat > /etc/yum.repos.d/kubernetes.repo << 'EOF'
+[kubernetes]
+name=Kubernetes
+baseurl=https://mirrors.cloud.tencent.com/kubernetes_new/core:/stable:/v1.32/rpm/
 enabled=1
 gpgcheck=0
 EOF
 
 yum makecache
 
-yum -y install kubeadm-1.30.0 kubelet-1.30.0 kubectl-1.30.0
+yum -y install kubeadm-1.32.0 kubelet-1.32.0 kubectl-1.32.0
 
 systemctl enable --now kubelet
 ```
 
-### 4、初始化 k8s-1.30.0 集群
-
-```shell
-mkdir ~/kubeadm_init && cd ~/kubeadm_init
-
-kubeadm config print init-defaults > kubeadm-init.yaml
-
-cat > ~/kubeadm_init/kubeadm-init.yaml << EOF
-apiVersion: kubeadm.k8s.io/v1beta3
-bootstrapTokens:
-- groups:
-  - system:bootstrappers:kubeadm:default-node-token
-  token: abcdef.0123456789abcdef
-  ttl: 24h0m0s
-  usages:
-  - signing
-  - authentication
-kind: InitConfiguration
-localAPIEndpoint:
-  advertiseAddress: 192.168.1.10 # 修改自己的ip
-  bindPort: 6443
-nodeRegistration:
-  criSocket: unix:///var/run/containerd/containerd.sock
-  imagePullPolicy: IfNotPresent
-  name: k8s-master1
-  taints:
-  - effect: NoSchedule
-    key: node-role.kubernetes.io/k8s-master
----
-apiServer:
-  timeoutForControlPlane: 4m0s
-apiVersion: kubeadm.k8s.io/v1beta3
-certificatesDir: /etc/kubernetes/pki
-clusterName: kubernetes
-controlPlaneEndpoint: 192.168.1.10:9443 # 高可用vip的ip
-controllerManager: {}
-dns: {}
-etcd:
-  local:
-    dataDir: /var/lib/etcd
-imageRepository: registry.aliyuncs.com/google_containers
-kind: ClusterConfiguration
-kubernetesVersion: v1.30.0
-networking:
-  dnsDomain: cluster.local
-  podSubnet: 10.244.0.0/16
-  serviceSubnet: 10.96.0.0/12
-scheduler: {}
----
-apiVersion: kubeproxy.config.k8s.io/v1alpha1
-kind: KubeProxyConfiguration
-mode: ipvs
----
-apiVersion: kubelet.config.k8s.io/v1beta1
-kind: KubeletConfiguration
-cgroupDriver: systemd
-EOF
-```
-
-```shell
-# 查看所需镜像列表
-kubeadm config images list --config kubeadm-init.yaml
-
-kubeadm config images list --kubernetes-version=v1.30.0 --image-repository registry.aliyuncs.com/google_containers
-```
-
-```shell
-# 预拉取镜像
-kubeadm config images pull --config kubeadm-init.yaml
-
-kubeadm config images pull --kubernetes-version=v1.30.0 --image-repository registry.aliyuncs.com/google_containers
-```
-
-```shell
-# 初始化
-kubeadm init --config=kubeadm-init.yaml --upload-certs --dry-run
-
-kubeadm init --config=kubeadm-init.yaml --upload-certs | tee kubeadm-init.log
-```
-
-```shell
-# 配置 kubectl
-mkdir -p $HOME/.kube
-sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
-```
-
-### 5、安装 k8s 集群网络（calico）
-
-查看calico与k8s的版本对应关系
-
-> https://docs.tigera.io/calico/3.27/getting-started/kubernetes/requirements
->
-> https://github.com/projectcalico/calico
-
-> 这里k8s-1.30.0，所以使用calico-v3.27.3版本（版本对应很关键）
-
-```shell
-# mkdir -p ~/calico-yml
-
-# cd ~/calico-yml && wget https://github.com/projectcalico/calico/raw/v3.27.3/manifests/calico.yaml
-```
-
-```shell
-mkdir -p ~/calico-yml
-
-cd ~/calico-yml && wget https://gitee.com/kubelsp/upload/raw/master/calico/v3.27.3/calico.yaml
-```
-
-```shell
-1 修改CIDR
-- name: CALICO_IPV4POOL_CIDR
-  value: "10.244.0.0/16"
-
-2 指定网卡
-# Cluster type to identify the deployment type
-  - name: CLUSTER_TYPE
-  value: "k8s,bgp"
-# 下面添加
-  - name: IP_AUTODETECTION_METHOD
-    value: "interface=ens33,ens160"
-    # ens33为本地网卡名字（自己机器啥网卡就改啥）
-```
-
-```shell
-# 1 修改CIDR
-sed -i 's/192\.168/10\.244/g' calico.yaml
-
-sed -i 's/# \(- name: CALICO_IPV4POOL_CIDR\)/\1/' calico.yaml
-sed -i 's/# \(\s*value: "10.244.0.0\/16"\)/\1/' calico.yaml
-```
-
-```shell
-# 2 指定网卡（ens33为本地网卡名字（自己机器啥网卡就改啥））
-sed -i '/value: "k8s,bgp"/a \            - name: IP_AUTODETECTION_METHOD' \calico.yaml
-
-sed -i '/- name: IP_AUTODETECTION_METHOD/a \              value: "interface=ens33,ens160"' \calico.yaml
-```
-
-```shell
-kubectl apply -f ~/calico-yml/calico.yaml
-```
-
-### 6、coredns 解析测试是否正常
-
-```shell
-[root@k8s-master ~]# kubectl run -it --rm dns-test --image=busybox:1.36.1 sh
-If you don't see a command prompt, try pressing enter.
-/ # nslookup kubernetes
-Server:    10.96.0.10
-Address 1: 10.96.0.10 kube-dns.kube-system.svc.cluster.local   # 看到这个说明dns解析正常
-
-Name:      kubernetes
-Address 1: 10.96.0.1 kubernetes.default.svc.cluster.local
-/ #
-```
-
-```shell
-kubectl run -it --rm dns-test --image=busybox:1.36.1 sh
-
-kubectl run -it --rm dns-test --image=ccr.ccs.tencentyun.com/huanghuanhui/busybox:1.36.1 sh
-```
-
-```shell
-nslookup kubernetes.default.svc.cluster.local
-```
-
-### 7、k8s-node节点后期的加入命令（按照上面操作安装好containerd、kubeadm、kubelet、kubectl）
-
-```shell
-kubeadm token list
-
-kubeadm token create --print-join-command --dry-run
-
-kubeadm token create --print-join-command
-```
-
-```shell
-kubeadm token list
-
-kubeadm init phase upload-certs --upload-certs
-```
-
-====
+### 3、kube-vip
 
 > https://kube-vip.io/docs/installation/static/
 
@@ -902,4 +484,201 @@ kube-vip manifest pod \
     --bgpRouterID 192.168.1.13 \
     --bgppeers 192.168.1.11:65000::false,192.168.1.12:65000::false | tee /etc/kubernetes/manifests/kube-vip.yaml
 ````
+
+````shell
+curl -u 'elastic:47DFkhHYGFnAde' -X DELETE "http://10.2.254.14:9200/service-log-internal-backend-api-yaf-2025.03---10"
+````
+
+### 4、初始化 k8s-1.32.0 集群
+
+```shell
+mkdir -p ~/kubeadm_init && cd ~/kubeadm_init
+
+kubeadm config print init-defaults > kubeadm-init.yaml
+
+cat > ~/kubeadm_init/kubeadm-init.yaml << EOF
+apiVersion: kubeadm.k8s.io/v1beta4
+bootstrapTokens:
+- groups:
+  - system:bootstrappers:kubeadm:default-node-token
+  token: abcdef.0123456789abcdef
+  ttl: 24h0m0s
+  usages:
+  - signing
+  - authentication
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: 192.168.1.10 # 修改自己的ip
+  bindPort: 6443
+nodeRegistration:
+  criSocket: unix:///var/run/containerd/containerd.sock
+  imagePullPolicy: IfNotPresent
+  name: k8s-master
+  taints:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/k8s-master
+---
+apiServer: {}
+apiVersion: kubeadm.k8s.io/v1beta4
+certificatesDir: /etc/kubernetes/pki
+clusterName: kubernetes
+controlPlaneEndpoint: 192.168.1.10:6443 # 高可用kube-vip的ip
+controllerManager: {}
+dns: {}
+etcd:
+  local:
+    dataDir: /var/lib/etcd
+imageRepository: registry.aliyuncs.com/google_containers
+kind: ClusterConfiguration
+kubernetesVersion: v1.32.0
+networking:
+  dnsDomain: cluster.local
+  podSubnet: 10.244.0.0/16
+  serviceSubnet: 10.96.0.0/12
+scheduler: {}
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+mode: ipvs
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: systemd
+EOF
+```
+
+```shell
+# 查看所需镜像列表
+kubeadm config images list --config kubeadm-init.yaml
+
+kubeadm config images list --kubernetes-version=v1.31.2 --image-repository registry.aliyuncs.com/google_containers
+```
+
+```shell
+# 预拉取镜像
+kubeadm config images pull --config kubeadm-init.yaml
+
+kubeadm config images pull --kubernetes-version=v1.31.2 --image-repository registry.aliyuncs.com/google_containers
+```
+
+```shell
+# 初始化
+kubeadm init --config=kubeadm-init.yaml --upload-certs --dry-run
+
+kubeadm init --config=kubeadm-init.yaml --upload-certs | tee kubeadm-init.log
+```
+
+```shell
+# 配置 kubectl
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+
+### 5、安装 k8s 集群网络（calico）
+
+查看calico与k8s的版本对应关系
+
+> https://docs.tigera.io/calico/3.29/getting-started/kubernetes/requirements
+>
+> https://github.com/projectcalico/calico
+
+> 这里k8s-1.32.0，所以使用calico-v3.29.0版本（版本对应很关键）
+
+```shell
+# mkdir -p ~/calico-yml
+
+# cd ~/calico-yml && wget https://github.com/projectcalico/calico/raw/v3.29.0/manifests/calico.yaml
+```
+
+```shell
+mkdir -p ~/calico-yml
+
+cd ~/calico-yml && wget https://ghp.ci/https://github.com/projectcalico/calico/raw/v3.29.0/manifests/calico.yaml
+```
+
+```shell
+1 修改CIDR
+- name: CALICO_IPV4POOL_CIDR
+  value: "10.244.0.0/16"
+
+2 指定网卡
+# Cluster type to identify the deployment type
+  - name: CLUSTER_TYPE
+  value: "k8s,bgp"
+# 下面添加
+  - name: IP_AUTODETECTION_METHOD
+    value: "interface=eth0,ens33,ens160"
+    # ens33为本地网卡名字（自己机器啥网卡就改啥）
+    
+3 修改镜像仓库地址
+```
+
+```shell
+# 1 修改CIDR
+sed -i 's/192\.168/10\.244/g' calico.yaml
+
+sed -i 's/# \(- name: CALICO_IPV4POOL_CIDR\)/\1/' calico.yaml
+sed -i 's/# \(\s*value: "10.244.0.0\/16"\)/\1/' calico.yaml
+```
+
+```shell
+# 2 指定网卡（ens33为本地网卡名字（自己机器啥网卡就改啥））
+sed -i '/value: "k8s,bgp"/a \            - name: IP_AUTODETECTION_METHOD' \calico.yaml
+
+sed -i '/- name: IP_AUTODETECTION_METHOD/a \              value: "interface=eth0,ens33,ens160"' \calico.yaml
+```
+
+````shell
+# 3 修改镜像仓库
+sed -i 's#docker.io/calico/cni:v3.29.0#ccr.ccs.tencentyun.com/huanghuanhui/calico:cni-v3.29.0#g' calico.yaml
+
+sed -i 's#docker.io/calico/node:v3.29.0#ccr.ccs.tencentyun.com/huanghuanhui/calico:node-v3.29.0#g' calico.yaml
+
+sed -i 's#docker.io/calico/kube-controllers:v3.29.0# ccr.ccs.tencentyun.com/huanghuanhui/calico:kube-controllers-v3.29.0#g' calico.yaml
+````
+
+```shell
+kubectl apply -f ~/calico-yml/calico.yaml
+```
+
+### 6、coredns 解析测试是否正常
+
+```shell
+[root@k8s-master ~]# kubectl run -it --rm dns-test --image=busybox:1.37.0 sh
+If you don't see a command prompt, try pressing enter.
+/ # nslookup kubernetes
+Server:    10.96.0.10
+Address 1: 10.96.0.10 kube-dns.kube-system.svc.cluster.local   # 看到这个说明dns解析正常
+
+Name:      kubernetes
+Address 1: 10.96.0.1 kubernetes.default.svc.cluster.local
+/ #
+```
+
+```shell
+# kubectl run -it --rm dns-test --image=busybox:1.37.0 sh
+
+kubectl run -it --rm dns-test --image=ccr.ccs.tencentyun.com/huanghuanhui/busybox:1.37.0 sh
+```
+
+```shell
+nslookup kubernetes.default.svc.cluster.local
+```
+
+### 7、k8s-node节点后期的加入命令（按照上面操作安装好containerd、kubeadm、kubelet、kubectl）
+
+```shell
+kubeadm token list
+
+kubeadm token create --print-join-command --dry-run
+
+kubeadm token create --print-join-command
+```
+
+```shell
+kubeadm token list
+
+kubeadm init phase upload-certs --upload-certs
+```
 
