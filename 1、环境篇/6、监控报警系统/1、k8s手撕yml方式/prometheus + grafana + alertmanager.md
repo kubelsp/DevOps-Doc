@@ -1126,8 +1126,8 @@ spec:
         kubernetes.io/os: linux
       containers:
       - name: k8s-node-exporter
-        #image: prom/node-exporter:v1.7.0
-        image: ccr.ccs.tencentyun.com/huanghuanhui/node-exporter:v1.7.0
+        #image: prom/node-exporter:v1.9.0
+        image: ccr.ccs.tencentyun.com/huanghuanhui/node-exporter:v1.9.0
         args:
         - --web.listen-address=$(HOSTIP):9100
         - --path.procfs=/host/proc
@@ -1199,7 +1199,7 @@ docker run -d \
 -v "/:/rootfs:ro" \
 -e TZ=Asia/Shanghai \
 -v /etc/localtime:/etc/localtime \
-ccr.ccs.tencentyun.com/huanghuanhui/node-exporter:v1.7.0 \
+ccr.ccs.tencentyun.com/huanghuanhui/node-exporter:v1.9.0 \
 --path.procfs=/host/proc \
 --path.rootfs=/rootfs \
 --path.sysfs=/host/sys \
@@ -1827,7 +1827,7 @@ spec:
           - 0
       containers:
         - name: grafana
-          #image: grafana/grafana:11.1.3
+          #image: grafana/grafana:11.5.2
           image: ccr.ccs.tencentyun.com/huanghuanhui/grafana:11.5.2
           imagePullPolicy: IfNotPresent
           ports:
@@ -2100,8 +2100,8 @@ spec:
     spec:
       containers:
       - name: alertmanager
-        #image: prom/alertmanager:v0.27.0
-        image: ccr.ccs.tencentyun.com/huanghuanhui/alertmanager:v0.27.0
+        #image: prom/alertmanager:v0.28.0
+        image: ccr.ccs.tencentyun.com/huanghuanhui/alertmanager:v0.28.0
         ports:
         - containerPort: 9093
           name: http
