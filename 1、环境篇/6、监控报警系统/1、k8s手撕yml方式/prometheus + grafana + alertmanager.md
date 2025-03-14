@@ -687,7 +687,7 @@ spec:
       containers:
       - name: prometheus
         #image: prom/prometheus:v2.53.1
-        image: ccr.ccs.tencentyun.com/huanghuanhui/prometheus:v2.53.1
+        image: ccr.ccs.tencentyun.com/huanghuanhui/prometheus:v3.2.1
         imagePullPolicy: IfNotPresent
         args:
         - "--config.file=/etc/prometheus/prometheus.yml"
@@ -1828,7 +1828,7 @@ spec:
       containers:
         - name: grafana
           #image: grafana/grafana:11.1.3
-          image: ccr.ccs.tencentyun.com/huanghuanhui/grafana:11.1.3
+          image: ccr.ccs.tencentyun.com/huanghuanhui/grafana:11.5.2
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 3000
