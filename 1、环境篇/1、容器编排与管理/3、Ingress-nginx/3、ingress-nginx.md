@@ -101,6 +101,9 @@ controller:
     name: nginx
     controllerValue: k8s.io/ingress-nginx
 
+  metrics:
+    enabled: true
+
   kind: Deployment
   replicaCount: 3  # 设置副本数为 3
 
