@@ -84,13 +84,13 @@ velero（集群 A 和 集群 B）
 1、安装
 
 ```shell
-wget https://github.com/vmware-tanzu/velero/releases/download/v1.13.2/velero-v1.13.2-linux-amd64.tar.gz
+wget https://github.com/vmware-tanzu/velero/releases/download/v1.15.2/velero-v1.15.2-linux-amd64.tar.gz
 ```
 
 ```shell
-tar xf ~/velero-v1.13.2-linux-amd64.tar.gz
+tar xf ~/velero-v1.15.2-linux-amd64.tar.gz
 
-cp ~/velero-v1.13.2-linux-amd64/velero /usr/local/sbin
+cp ~/velero-v1.15.2-linux-amd64/velero /usr/local/sbin
 ```
 
 ```shell
@@ -107,13 +107,13 @@ EOF
 ```shell
 velero install --help |grep Image
 
-(default "velero/velero:v1.13.2")
+(default "velero/velero:v1.15.2")
 ```
 
 ```shell
-velero/velero-plugin-for-aws:v1.9.2 ==> ccr.ccs.tencentyun.com/huanghuanhui/velero-plugin-for-aws:v1.9.2
+velero/velero-plugin-for-aws:v1.11.1 ==> ccr.ccs.tencentyun.com/huanghuanhui/velero-plugin-for-aws:v1.11.1
 
-velero/velero:v1.13.2 ==> ccr.ccs.tencentyun.com/huanghuanhui/velero:v1.13.2
+velero/velero:v1.13.2 ==> ccr.ccs.tencentyun.com/huanghuanhui/velero:v1.15.2
 ```
 
 ```shell
@@ -121,13 +121,13 @@ velero/velero:v1.13.2 ==> ccr.ccs.tencentyun.com/huanghuanhui/velero:v1.13.2
 velero --kubeconfig /root/.kube/config \
   install \
     --provider aws \
-    --plugins ccr.ccs.tencentyun.com/huanghuanhui/velero-plugin-for-aws:v1.9.2 \
+    --plugins ccr.ccs.tencentyun.com/huanghuanhui/velero-plugin-for-aws:v1.11.1 \
     --bucket velero-k8s \
     --secret-file ~/velero/velero-auth.txt \
     --use-volume-snapshots=false \
     --uploader-type=restic \
     --use-node-agent \
-    --image=ccr.ccs.tencentyun.com/huanghuanhui/velero:v1.13.2 \
+    --image=ccr.ccs.tencentyun.com/huanghuanhui/velero:v1.15.2 \
     --namespace velero-system \
     --backup-location-config region=minio,s3ForcePathStyle="true",s3Url=http://192.168.1.10:9000
 ```
