@@ -1,10 +1,61 @@
 ###### k8s部署StreamPark
 
 ````shell
-mkdir -p ~/streampark-yml
+mkdir -p ~/k8s-streampark-yml/2.1.5-sql
 
 kubectl create ns streampark
 ````
+
+````shell
+cat > ~/k8s-streampark-yml/Dockerfile << 'EOF'
+FROM ccr.ccs.tencentyun.com/huanghuanhui/docker:27.1.1
+
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tencent.com/g' /etc/apk/repositories && \
+    apk update && apk add openjdk8 bash && \
+    echo 'export JAVA_HOME=/usr/lib/jvm/java-1.8-openjdk' >> /etc/profile && \
+
+    mkdir -p ~/apache-streampark_2.12-2.1.5 && \
+    mkdir -p ~/streampark_workspace && \
+    mkdir -p ~/.kube && \
+
+    wget https://mirrors.cloud.tencent.com/apache/streampark/2.1.5/apache-streampark_2.12-2.1.5-incubating-bin.tar.gz && \
+    tar xf apache-streampark_2.12-2.1.5-incubating-bin.tar.gz -C ~/apache-streampark_2.12-2.1.5 --strip-components=1 && \
+
+    wget -O ~/apache-streampark_2.12-2.1.5/lib/mysql-connector-java-8.0.28.jar \
+https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.28/mysql-connector-java-8.0.28.jar
+
+RUN echo "\
+sed -i '/^datasource:/,/^streampark:/ s/^  dialect:.*/  dialect: mysql/' ~/apache-streampark_2.12-2.1.5/conf/config.yaml && \
+sed -i '/^datasource:/,/^streampark:/ s/^  username:.*/  username: root/' ~/apache-streampark_2.12-2.1.5/conf/config.yaml && \
+sed -i '/^datasource:/,/^streampark:/ s/^  password:.*/  password: Admin@2025/' ~/apache-streampark_2.12-2.1.5/conf/config.yaml && \
+sed -i '/^datasource:/,/^streampark:/ s|^  url:.*|  url: jdbc:mysql://streampark-mysql-headless:3306/streampark?useUnicode=true\&characterEncoding=UTF-8\&useJDBCCompliantTimezoneShift=true\&useLegacyDatetimeCode=false\&serverTimezone=GMT%2B8|' ~/apache-streampark_2.12-2.1.5/conf/config.yaml && \
+sed -i '/  url:/a\  driver-class-name: com.mysql.cj.jdbc.Driver' ~/apache-streampark_2.12-2.1.5/conf/config.yaml && \
+sed -i '/  h2-data-dir:/d' ~/apache-streampark_2.12-2.1.5/conf/config.yaml" > 0.sh
+EOF
+````
+
+````shell
+sed -i '/^datasource:/,/^streampark:/ {
+    s/^  dialect:.*/  dialect: mysql/
+    s/^  username:.*/  username: root/
+    s/^  password:.*/  password: Admin@2025/
+    s|^  url:.*|  url: jdbc:mysql://streampark-mysql-headless:3306/streampark?useUnicode=true\&characterEncoding=UTF-8\&useJDBCCompliantTimezoneShift=true\&useLegacyDatetimeCode=false\&serverTimezone=GMT%2B8|
+    /  url:/a\  driver-class-name: com.mysql.cj.jdbc.Driver
+    /  h2-data-dir:/d
+}' config.yaml
+````
+
+````shell
+cat > ~/k8s-streampark-yml/build.sh << 'EOF'
+docker build -t ccr.ccs.tencentyun.com/huanghuanhui/streampark:dev .
+
+docker push ccr.ccs.tencentyun.com/huanghuanhui/streampark:dev
+EOF
+````
+
+```shell
+docker run -it --rm  ccr.ccs.tencentyun.com/huanghuanhui/streampark:dev  sh
+```
 
 ````shell
 cat > streampark-mysql.yml << 'EOF'
@@ -155,8 +206,6 @@ wget https://github.com/apache/streampark/raw/refs/tags/v2.1.5/streampark-consol
 wget https://github.com/apache/streampark/raw/refs/tags/v2.1.5/streampark-console/streampark-console-service/src/main/assembly/script/data/mysql-data.sql
 ````
 
-
-
 ````shell
 cat > streampark.yml << 'EOF'
 apiVersion: apps/v1
@@ -176,7 +225,7 @@ spec:
     spec:
       containers:
       - name: streampark-docker
-        image: registry.cn-hangzhou.aliyuncs.com/jingsocial/streampark:flink-1.20.0
+        image: registry.cn-hangzhou.aliyuncs.com/jingsocial/streampark:dev
         imagePullPolicy: Always
         ports:
         - name: http
@@ -204,6 +253,8 @@ spec:
         - name: kubeconfig
           mountPath: /root/.kube/config
           subPath: config
+        - name: flink-data
+          mountPath: /data
       - name: dockerd
         image: registry.cn-hangzhou.aliyuncs.com/jingsocial/docker:27.1.1-dind
         imagePullPolicy: IfNotPresent
@@ -218,7 +269,21 @@ spec:
       - name: kubeconfig
         configMap:
           name: kubeconfig
-        
+      - name: flink-data
+        persistentVolumeClaim:
+          claimName: flink-data        
+---
+apiVersion: v1
+kind:  PersistentVolumeClaim
+metadata:
+  name: flink-data
+  namespace: streampark
+spec:
+  storageClassName: "dev-sc"
+  accessModes: [ReadWriteMany]
+  resources:
+    requests:
+      storage: 2Ti
 ---
 apiVersion: v1
 kind: Service
@@ -232,7 +297,7 @@ spec:
   ports:
   - port: 10000
     targetPort: 10000
-    nodePort: 31120
+    nodePort: 31110
   selector:
     app: streampark
 EOF
@@ -246,9 +311,5 @@ kubectl create configmap kubeconfig --from-file=config -n streampark
 kubectl apply -f ~/streampark-yml/streampark.yml
 ```
 
-===
 
-````shell
-  docker run -d -p 9999:10000 apache/streampark:2.1.5
-````
 
