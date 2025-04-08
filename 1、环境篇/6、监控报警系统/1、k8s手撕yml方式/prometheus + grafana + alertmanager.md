@@ -628,6 +628,40 @@ data:
 EOF
 ```
 
+````shell
+      # prometheus 联邦
+      - job_name: 'federate'
+        scrape_interval: 15s
+
+        honor_labels: true
+        metrics_path: '/federate'
+
+        params:
+          'match[]':
+            - '{job="prometheus"}'                  # 拉取 job=prometheus 的所有指标
+            - '{__name__=~"job:.*"}'                # 拉取所有以 "job:" 开头的聚合指标
+            - '{__name__=~"node.*"}'                # 拉取所有以 "node" 开头的指标
+            - '{__name__=~"kube_.*"}'                
+            - '{__name__=~"container_.*"}'
+
+        static_configs:
+          - targets: ['49.232.253.17:31999']
+            labels:
+              cluster: 'k8s-01'  # 添加集群标识标签
+
+          - targets: ['49.232.254.17:31999']
+            labels:
+              cluster: 'k8s-02'  # 添加集群标识标签
+
+          - targets: ['49.232.255.17:31999']
+            labels:
+              cluster: 'k8s-03'  # 添加集群标识标签
+
+          - targets: ['49.232.256.17:31999']
+            labels:
+              cluster: 'k8s-04'  # 添加集群标识标签
+````
+
 ```shell
 kubectl apply -f ~/prometheus-yml/prometheus-ConfigMap.yml
 
