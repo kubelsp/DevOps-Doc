@@ -2,13 +2,13 @@
 
 k8s 手撕方式安装 prometheus + grafana + alertmanager
 
-> k8s版本：k8s-1.31.2
+> k8s版本：k8s-1.32.3
 >
-> prometheus版本：v2.53.1
+> prometheus版本：v3.2.1
 >
-> grafana版本：v11.1.3
+> grafana版本：v11.6.0
 >
-> alertmanager版本：v0.27.0
+> alertmanager版本：v0.28.1
 >
 > https://github.com/prometheus/prometheus/releases/latest
 >
@@ -135,15 +135,12 @@ data:
 
     scrape_configs:
 
-      #0、监控 prometheus
+      # 0、监控 prometheus
       - job_name: prometheus
         static_configs:
           - targets: ['localhost:9090']
 
-      - job_name: 1.15.172.119
-        static_configs:
-          - targets: ['1.15.172.119:9100']
-
+      # 1、consul 自动注册发现
       - job_name: 'consul-prometheus'
         consul_sd_configs:
           - server: 'consul-server-http.monitoring.svc.cluster.local:8500'
@@ -156,7 +153,7 @@ data:
             regex: '.*(node-exporter|hosts).*'
             action: keep
 
-      #1、监控 k8s节点
+      # 2、监控 k8s节点
       - job_name: 'k8s-nodes'
         kubernetes_sd_configs:
         - role: node
@@ -169,7 +166,7 @@ data:
         - action: labelmap
           regex: __meta_kubernetes_node_label_(.+)
 
-      #2、监控 k8s-etcd
+      # 3、监控 k8s-etcd
       - job_name: 'k8s-etcd'
         metrics_path: metrics
         scheme: http
@@ -185,7 +182,7 @@ data:
         - action: labelmap
           regex: __meta_kubernetes_pod_label_(.+)
           
-      #3、监控 kube-apiserver
+      # 4、监控 kube-apiserver
       - job_name: 'kube-apiserver'
         kubernetes_sd_configs:
         - role: endpoints
@@ -198,7 +195,7 @@ data:
           action: keep
           regex: default;kubernetes;https
 
-      #4、监控 kube-controller-manager
+      # 5、监控 kube-controller-manager
       - job_name: 'kube-controller-manager'
         kubernetes_sd_configs:
         - role: endpoints
@@ -212,7 +209,7 @@ data:
           action: keep
           regex: kube-system;kube-controller-manager
 
-      #5、监控 kube-scheduler
+      # 6、监控 kube-scheduler
       - job_name: 'kube-scheduler'
         kubernetes_sd_configs:
         - role: endpoints
@@ -226,7 +223,7 @@ data:
           action: keep
           regex: kube-system;kube-scheduler
 
-      #6、监控 kubelet
+      # 7、监控 kubelet
       - job_name: 'kubelet'
         kubernetes_sd_configs:
         - role: node
@@ -240,7 +237,7 @@ data:
           regex: __meta_kubernetes_node_label_(.+)
           replacement: $1
 
-      #7、监控 kube-proxy
+      # 8、监控 kube-proxy
       - job_name: 'kube-proxy'
         metrics_path: metrics
         scheme: http
@@ -257,12 +254,12 @@ data:
         - action: labelmap
           regex: __meta_kubernetes_pod_label_(.+)
 
-      #8、监控 coredns
+      # 9、监控 coredns
       - job_name: 'coredns'
         static_configs:
           - targets: ['kube-dns.kube-system.svc.cluster.local:9153']
 
-      #9、监控容器
+      # 10、监控容器
       - job_name: 'kubernetes-cadvisor'
         kubernetes_sd_configs:
         - role: node
@@ -279,39 +276,6 @@ data:
           regex: (.+)
           replacement: /metrics/cadvisor
           target_label: __metrics_path__
-
-      #10、svc自动发现
-      - job_name: 'k8s-service-endpoints'
-        kubernetes_sd_configs:
-        - role: endpoints
-        relabel_configs:
-        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
-          action: keep
-          regex: true
-        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
-          action: replace
-          target_label: __scheme__
-          regex: (https?)
-        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
-          action: replace
-          target_label: __metrics_path__
-          regex: (.+)
-        - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
-          action: replace
-          target_label: __address__
-          regex: ([^:]+)(?::\d+)?;(\d+)
-          replacement: $1:$2
-        - action: labelmap
-          regex: __meta_kubernetes_service_label_(.+)
-        - source_labels: [__meta_kubernetes_namespace]
-          action: replace
-          target_label: kubernetes_namespace
-        - source_labels: [__meta_kubernetes_service_name]
-          action: replace
-          target_label: kubernetes_name
-        - source_labels: [__meta_kubernetes_pod_name]
-          action: replace
-          target_label: kubernetes_pod_name
           
       # 11、监控 kube-state-metrics
       - job_name: "kube-state-metrics"
@@ -321,6 +285,19 @@ data:
         - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_endpoints_name]
           regex: kube-system;kube-state-metrics
           action: keep
+
+      # 12、监控 ingress-nginx
+      - job_name: "ingress-nginx"
+        kubernetes_sd_configs:
+        - role: endpoints
+        relabel_configs:
+        - source_labels:
+          - __meta_kubernetes_namespace
+          - __meta_kubernetes_service_name
+          - __meta_kubernetes_endpoint_port_name
+          regex: ingress-nginx;ingress-nginx-controller-metrics;metrics
+          action: keep
+        scheme: http
 
   # 告警规则
   rules.yml: |
@@ -686,7 +663,7 @@ spec:
       serviceAccountName: prometheus
       containers:
       - name: prometheus
-        #image: prom/prometheus:v2.53.1
+        #image: prom/prometheus:v3.2.1
         image: ccr.ccs.tencentyun.com/huanghuanhui/prometheus:v3.2.1
         imagePullPolicy: IfNotPresent
         args:
@@ -701,7 +678,7 @@ spec:
         volumeMounts:
         - mountPath: "/prometheus"
           subPath: prometheus
-          name: data
+          name: prometheus-data
         - mountPath: "/etc/prometheus"
           name: config
         - mountPath: "/etc/prometheus/rules"
@@ -711,14 +688,27 @@ spec:
         resources:
           limits:
             cpu: "2"
-            memory: "4Gi"
+            memory: "8Gi"
           requests:
             cpu: "1"
             memory: "2Gi"
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+          initialDelaySeconds: 5
+          periodSeconds: 10
       volumes:
-      - name: data
+      - name: prometheus-data
         persistentVolumeClaim:
-          claimName: prometheus-nfs-client-pvc
+          claimName: prometheus-pvc
       - name: config
         configMap:
           name: prometheus-config
@@ -730,9 +720,9 @@ spec:
           path: /etc/localtime
 ---
 apiVersion: v1
-kind:  PersistentVolumeClaim
+kind: PersistentVolumeClaim
 metadata:
-  name: prometheus-nfs-client-pvc
+  name: prometheus-pvc
   namespace: monitoring
 spec:
   storageClassName: nfs-storage
@@ -767,7 +757,7 @@ spec:
   - name: web
     port: 9090
     targetPort: http
-    nodePort: 31111
+    nodePort: 31999
 EOF
 ```
 
@@ -809,10 +799,10 @@ EOF
 ```
 
 ```shell
-kubectl create secret -n monitoring \
-tls prometheus-ingress-tls \
---key=/root/ssl/openhhh.com.key \
---cert=/root/ssl/openhhh.com.pem
+#kubectl create secret -n monitoring \
+#tls prometheus-ingress-tls \
+#--key=/root/ssl/openhhh.com.key \
+#--cert=/root/ssl/openhhh.com.pem
 ```
 
 ```shell
@@ -1827,8 +1817,8 @@ spec:
           - 0
       containers:
         - name: grafana
-          #image: grafana/grafana:11.5.2
-          image: ccr.ccs.tencentyun.com/huanghuanhui/grafana:11.5.2
+          #image: grafana/grafana:11.6.0
+          image: ccr.ccs.tencentyun.com/huanghuanhui/grafana:11.6.0
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 3000
@@ -1840,7 +1830,7 @@ spec:
           - name: GF_SECURITY_ADMIN_USER
             value: admin
           - name: GF_SECURITY_ADMIN_PASSWORD
-            value: Admin@2024
+            value: Admin@2025
           readinessProbe:
             failureThreshold: 3
             httpGet:
@@ -1874,7 +1864,7 @@ spec:
       volumes:
         - name: grafana-data
           persistentVolumeClaim:
-            claimName: grafana-nfs-client-pvc
+            claimName: grafana-pvc
         - name: config
           configMap:
             name: grafana-config
@@ -1882,7 +1872,7 @@ spec:
 apiVersion: v1
 kind:  PersistentVolumeClaim
 metadata:
-  name: grafana-nfs-client-pvc
+  name: grafana-pvc
   namespace: monitoring
 spec:
   storageClassName: nfs-storage
@@ -1901,7 +1891,7 @@ metadata:
 spec:
   type: NodePort
   ports:
-  - nodePort: 31300
+  - nodePort: 31998
     port: 3000
   selector:
     app: grafana
@@ -2100,8 +2090,8 @@ spec:
     spec:
       containers:
       - name: alertmanager
-        #image: prom/alertmanager:v0.28.0
-        image: ccr.ccs.tencentyun.com/huanghuanhui/alertmanager:v0.28.0
+        #image: prom/alertmanager:v0.28.1
+        image: ccr.ccs.tencentyun.com/huanghuanhui/alertmanager:v0.28.1
         ports:
         - containerPort: 9093
           name: http
@@ -2122,7 +2112,7 @@ spec:
           name: alertmanager-config
       - name: alertmanager-data
         persistentVolumeClaim:
-          claimName: alertmanager-nfs-client-pvc
+          claimName: alertmanager-pvc
       - name: localtime
         hostPath:
           path: /etc/localtime
@@ -2131,7 +2121,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: alertmanager-nfs-client-pvc
+  name: alertmanager-pvc
   namespace: monitoring
 spec:
   storageClassName: nfs-storage
@@ -2139,7 +2129,7 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: "20Gi"
+      storage: "2Ti"
 EOF
 ```
 
@@ -2183,7 +2173,7 @@ spec:
   - name: web
     port: 9093
     targetPort: http
-    nodePort: 30093
+    nodePort: 31997
 EOF
 ```
 
