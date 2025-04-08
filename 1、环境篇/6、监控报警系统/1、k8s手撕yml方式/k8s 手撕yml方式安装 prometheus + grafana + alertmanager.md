@@ -1,6 +1,6 @@
-### 16、prometheus + grafana + alertmanager
+### k8s 手撕yml方式安装 prometheus + grafana + alertmanager
 
-k8s 手撕方式安装 prometheus + grafana + alertmanager
+
 
 > k8s版本：k8s-1.32.3
 >
@@ -847,6 +847,18 @@ kubectl apply -f ~/prometheus-yml/prometheus-Ingress.yml
 
 `告警规则`
 
+> hosts.rules
+>
+> kubeadm.rules
+>
+> node.rules
+>
+> pod.rules
+>
+> svc.rules
+>
+> pvc.rules
+>
 > 更多告警规则查看：https://samber.github.io/awesome-prometheus-alerts/
 
 ```shell
