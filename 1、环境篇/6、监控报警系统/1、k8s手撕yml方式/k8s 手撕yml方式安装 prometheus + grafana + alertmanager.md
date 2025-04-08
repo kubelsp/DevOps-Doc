@@ -298,333 +298,6 @@ data:
           regex: ingress-nginx;ingress-nginx-controller-metrics;metrics
           action: keep
         scheme: http
-
-  # 告警规则
-  rules.yml: |
-    groups:
-    - name: Hosts.rules
-      rules:
-      ## Custom By huanghuanhui
-      - alert: HostDown
-        expr: up == 0
-        for: 1m
-        labels:
-          cluster: RTG
-          severity: P1
-        annotations:
-          Summary: '主机{{ $labels.instance }}  ${{ $labels.job }} down'
-          description: "主机: 【{{ $labels.instance }}】has been down for more than 1 minute"
-
-    - name: node-mem
-      rules:
-      - alert: NodeMemoryUsage
-        expr: (node_memory_MemTotal_bytes - (node_memory_MemFree_bytes + node_memory_Buffers_bytes + node_memory_Cached_bytes)) / node_memory_MemTotal_bytes * 100 > 80
-        for: 1m
-        labels:
-          cluster: RTG
-          severity: P1
-        annotations:
-          summary: "{{$labels.instance}}: High Memory usage detected"
-          description: "{{$labels.instance}}: Memory usage is above 80% (current value is: {{ $value }})"
-          
-      - alert: HostCpuLoadAvage
-        expr:  node_load5 /count by (instance, job) (node_cpu_seconds_total{mode="idle"}) >= 0.95
-        for: 1m
-        annotations:
-          Summary: "主机{{ $labels.instance }} cpu 5分钟负载比率大于1 (当前值：{{ $value }})"
-          description: "主机: 【{{ $labels.instance }}】 cpu_load5值大于核心数。 (当前比率值：{{ $value }})"
-        labels:
-          cluster: RTG
-          severity: 'P3'
-
-      - alert: HostCpuUsage
-        expr: (1-((sum(increase(node_cpu_seconds_total{mode="idle"}[5m])) by (instance))/ (sum(increase(node_cpu_seconds_total[5m])) by (instance))))*100 > 80
-        for: 1m
-        annotations:
-          Summary: "主机{{ $labels.instance }} CPU 5分钟使用率大于80% (当前值：{{ $value }})"
-          description: "主机: 【{{ $labels.instance }}】 5五分钟内CPU使用率超过80% (当前值：{{ $value }})"
-        labels:
-          cluster: RTG
-          severity: 'P1'
-
-      - alert: HostMemoryUsage
-        expr: (1-((node_memory_Buffers_bytes + node_memory_Cached_bytes + node_memory_MemFree_bytes)/node_memory_MemTotal_bytes))*100 > 80
-        for: 1m
-        annotations:
-          Summary: "主机{{ $labels.instance }} 内存使用率大于80% (当前值：{{ $value }})"
-          description: "主机: 【{{ $labels.instance }}】 内存使用率超过80% (当前使用率：{{ $value }}%)"
-        labels:
-          cluster: RTG
-          severity: 'P3'
-
-      - alert: HostIOWait
-        expr: ((sum(increase(node_cpu_seconds_total{mode="iowait"}[5m])) by (instance))/(sum(increase(node_cpu_seconds_total[5m])) by (instance)))*100 > 10
-        for: 1m
-        annotations:
-          Summary: "主机{{ $labels.instance }} iowait大于10% (当前值：{{ $value }})"
-          description: "主机: 【{{ $labels.instance }}】 5五分钟内磁盘IO过高 (当前负载值：{{ $value }})"
-        labels:
-          cluster: RTG
-          severity: 'P3'
-
-      - alert: HostFileSystemUsage
-        expr: (1-(node_filesystem_free_bytes{fstype=~"ext4|xfs",mountpoint!~".*tmp|.*boot" }/node_filesystem_size_bytes{fstype=~"ext4|xfs",mountpoint!~".*tmp|.*boot" }))*100 > 80
-        for: 1m
-        annotations:
-          Summary: "主机{{ $labels.instance }} {{ $labels.mountpoint }} 磁盘空间使用大于80%  (当前值：{{ $value }})"
-          description: "主机: 【{{ $labels.instance }}】 {{ $labels.mountpoint }}分区使用率超过80%, 当前值使用率：{{ $value }}%"
-        labels:
-          cluster: RTG
-          severity: 'P3'
-
-      - alert: HostSwapIsFillingUp
-        expr: (1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes)) * 100 > 80
-        for: 2m
-        labels:
-          cluster: RTG
-          severity: 'P4'
-        annotations:
-          Summary: "主机: 【{{ $labels.instance }}】 swap分区使用超过 (>80%), 当前值使用率: {{ $value }}%"
-          description: "主机: 【{{ $labels.instance }}】 swap分区使用超过 (>80%), 当前值使用率: {{ $value }}%"
-
-      - alert: HostNetworkConnection-ESTABLISHED
-        expr:  sum(node_netstat_Tcp_CurrEstab) by (instance) > 2000
-        for: 5m
-        labels:
-          cluster: RTG
-          severity: 'P4'
-        annotations:
-          Summary: "主机{{ $labels.instance }} ESTABLISHED连接数过高 (当前值：{{ $value }})"
-          description: "主机: 【{{ $labels.instance }}】 ESTABLISHED连接数超过2000, 当前ESTABLISHED连接数: {{ $value }}"
-
-      - alert: HostNetworkConnection-TIME_WAIT
-        expr:  sum(node_sockstat_TCP_tw) by (instance) > 1000
-        for: 5m
-        labels:
-          cluster: RTG
-          severity: 'P3'
-        annotations:
-          Summary: "主机{{ $labels.instance }} TIME_WAIT连接数过高 (当前值：{{ $value }})"
-          description: "主机: 【{{ $labels.instance }}】 TIME_WAIT连接数超过1000, 当前TIME_WAIT连接数: {{ $value }}"
-
-      - alert: HostUnusualNetworkThroughputIn
-        expr:  sum by (instance, device) (rate(node_network_receive_bytes_total{device=~"eth.*"}[2m])) / 1024 / 1024 > 300
-        for: 5m
-        labels:
-          cluster: RTG
-          severity: 'P3'
-        annotations:
-          Summary: "主机{{ $labels.instance }} 入口流量超过 (> 300 MB/s)  (当前值：{{ $value }})"
-          description: "主机: 【{{ $labels.instance }}】, 网卡: {{ $labels.device }} 入口流量超过 (> 300 MB/s), 当前值: {{ $value }}"
-
-      - alert: HostUnusualNetworkThroughputOut
-        expr: sum by (instance, device) (rate(node_network_transmit_bytes_total{device=~"eth.*"}[2m])) / 1024 / 1024 > 300
-        for: 5m
-        labels:
-          cluster: RTG
-          severity: 'P4'
-        annotations:
-          Summary: "主机{{ $labels.instance }} 出口流量超过 (> 300 MB/s)  (当前值：{{ $value }})"
-          description: "主机: 【{{ $labels.instance }}】, 网卡: {{ $labels.device }} 出口流量超过 (> 300 MB/s), 当前值: {{ $value }}"
-
-      - alert: HostUnusualDiskReadRate
-        expr: sum by (instance, device) (rate(node_disk_read_bytes_total[2m])) / 1024 / 1024 > 50
-        for: 5m
-        labels:
-          cluster: RTG
-          severity: 'P4'
-        annotations:
-          Summary: "主机{{ $labels.instance }} 磁盘读取速率超过(50 MB/s)  (当前值：{{ $value }})"
-          description: "主机: 【{{ $labels.instance }}】, 磁盘: {{ $labels.device }} 读取速度超过(50 MB/s), 当前值: {{ $value }}"
-
-      - alert: HostUnusualDiskWriteRate
-        expr: sum by (instance, device) (rate(node_disk_written_bytes_total[2m])) / 1024 / 1024 > 50
-        for: 2m
-        labels:
-          cluster: RTG
-          severity: 'P4'
-        annotations:
-          Summary: "主机{{ $labels.instance }} 磁盘读写入率超过(50 MB/s)  (当前值：{{ $value }})"
-          description: "主机: 【{{ $labels.instance }}】, 磁盘: {{ $labels.device }} 写入速度超过(50 MB/s), 当前值: {{ $value }}"
-
-      - alert: HostOutOfInodes
-        expr: node_filesystem_files_free{fstype=~"ext4|xfs",mountpoint!~".*tmp|.*boot" } / node_filesystem_files{fstype=~"ext4|xfs",mountpoint!~".*tmp|.*boot" } * 100 < 10
-        for: 2m
-        labels:
-          cluster: RTG
-          severity: 'P3'
-        annotations:
-          Summary: "主机{{ $labels.instance }} {{ $labels.mountpoint }}分区主机Inode值小于5% (当前值：{{ $value }}) "
-          description: "主机: 【{{ $labels.instance }}】 {{ $labels.mountpoint }}分区inode节点不足 (可用值小于{{ $value }}%)"
-
-      - alert: HostUnusualDiskReadLatency
-        expr: rate(node_disk_read_time_seconds_total[2m]) / rate(node_disk_reads_completed_total[2m])  * 1000 > 100 and rate(node_disk_reads_completed_total[2m]) > 0
-        for: 5m
-        labels:
-          cluster: RTG
-          severity: 'P4'
-        annotations:
-          Summary: "主机{{ $labels.instance }} 主机磁盘Read延迟大于100ms (当前值：{{ $value }}ms)"
-          description: "主机: 【{{ $labels.instance }}】, 磁盘: {{ $labels.device }} Read延迟过高 (read operations > 100ms), 当前延迟值: {{ $value }}ms"
-
-      - alert: HostUnusualDiskWriteLatency
-        expr: rate(node_disk_write_time_seconds_total[2m]) / rate(node_disk_writes_completed_total[2m]) * 1000 > 100 and rate(node_disk_writes_completed_total[2m]) > 0
-        for: 5m
-        labels:
-          cluster: RTG
-          severity: 'P4'
-        annotations:
-          Summary: "主机{{ $labels.instance }} 主机磁盘write延迟大于100ms (当前值：{{ $value }}ms)"
-          description: "主机: 【{{ $labels.instance }}】, 磁盘: {{ $labels.device }} Write延迟过高 (write operations > 100ms), 当前延迟值: {{ $value }}ms"
-
-      - alert: NodeFilesystemFilesFillingUp
-        annotations:
-          description: '预计4小时后 分区:{{ $labels.device }}  主机:{{ $labels.instance }} 可用innode仅剩余 {{ printf "%.2f" $value }}%.'
-          runbook_url: https://runbooks.prometheus-operator.dev/runbooks/node/nodefilesystemfilesfillingup
-          Summary: '主机{{ $labels.instance }} 预计4小时后可用innode数会低于15% (当前值：{{ $value }})'
-        labels:
-          cluster: RTG
-          severity: p3
-        expr: |
-          (
-            node_filesystem_files_free{job="node-exporter|vm-node-exporter",fstype!=""} / node_filesystem_files{job="node-exporter|vm-node-exporter",fstype!=""} * 100 < 15
-          and
-            predict_linear(node_filesystem_files_free{job="node-exporter|vm-node-exporter",fstype!=""}[6h], 4*60*60) < 0
-          and
-            node_filesystem_readonly{job="node-exporter|vm-node-exporter",fstype!=""} == 0
-          )
-        for: 1h
-
-      - alert: NodeFileDescriptorLimit
-        annotations:
-          description: '主机:{{ $labels.instance }} 文件描述符使用率超过70% {{ printf "%.2f" $value }}%.'
-          runbook_url: https://runbooks.prometheus-operator.dev/runbooks/node/nodefiledescriptorlimit
-          Summary: '主机: {{ $labels.instance }}文件描述符即将被耗尽. (当前值：{{ $value }})'
-        expr: |
-          (
-            node_filefd_allocated{job="node-exporter|vm-node-exporter"} * 100 / node_filefd_maximum{job="node-exporter|vm-node-exporter"} > 70
-          )
-        for: 15m
-        labels:
-          severity: p3
-          action: monitor
-          cluster: RTG
-
-      - alert: NodeClockSkewDetected
-        annotations:
-          description: '主机: {{ $labels.instance }} 时钟延时超过 300s.'
-          runbook_url: https://runbooks.prometheus-operator.dev/runbooks/node/nodeclockskewdetected
-          Summary: '主机: {{ $labels.instance }}时钟延时超过 300s.(当前值：{{ $value }})'
-        expr: |
-          (
-            node_timex_offset_seconds > 0.05
-          and
-            deriv(node_timex_offset_seconds[5m]) >= 0
-          )
-          or
-          (
-            node_timex_offset_seconds < -0.05
-          and
-            deriv(node_timex_offset_seconds[5m]) <= 0
-          )
-        for: 10m
-        labels:
-          severity: p3
-          cluster: RTG
-
-      - alert: NodeFilesystemFilesFillingUp
-        annotations:
-          description: '预计4小时后 分区:{{ $labels.device }}  主机:{{ $labels.instance }} 可用innode仅剩余 {{ printf "%.2f" $value }}%.'
-          runbook_url: https://runbooks.prometheus-operator.dev/runbooks/node/nodefilesystemfilesfillingup
-          Summary: '主机{{ $labels.instance }} 预计4小时后可用innode数会低于15% (当前值：{{ $value }})'
-        expr: |
-          (
-            node_filesystem_files_free{job="node-exporter|vm-node-exporter",fstype!=""} / node_filesystem_files{job="node-exporter|vm-node-exporter",fstype!=""} * 100 < 15
-          and
-            predict_linear(node_filesystem_files_free{job="node-exporter|vm-node-exporter",fstype!=""}[6h], 4*60*60) < 0
-          and
-            node_filesystem_readonly{job="node-exporter|vm-node-exporter",fstype!=""} == 0
-          )
-        for: 1h
-        labels:
-          severity: p3
-          cluster: RTG
-
-
-      - alert: NodeFilesystemSpaceFillingUp
-        annotations:
-          description: '主机: {{ $labels.instance }} 分区: {{ $labels.device }} 预计在4小时候只有 {{ printf "%.2f" $value }}%.'
-          runbook_url: https://runbooks.prometheus-operator.dev/runbooks/node/nodefilesystemspacefillingup
-          Summary: "主机: {{ $labels.instance }}预计4小时候磁盘空闲会低于15% (当前值：{{ $value }})"
-        expr: |
-          (
-            node_filesystem_avail_bytes{job="node-exporter|vm-node-exporter",fstype!=""} / node_filesystem_size_bytes{job="node-exporter|vm-node-exporter",fstype!=""} * 100 < 15
-          and
-            predict_linear(node_filesystem_avail_bytes{job="node-exporter|vm-node-exporter",fstype!=""}[6h], 4*60*60) < 0
-          and
-            node_filesystem_readonly{job="node-exporter|vm-node-exporter",fstype!=""} == 0
-          )
-        for: 1h
-        labels:
-          severity: p3
-          cluster: RTG
-      - alert: NodeNetworkReceiveErrs
-        annotations:
-          description: '{{ $labels.instance }} interface {{ $labels.device }} has encountered
-            {{ printf "%.0f" $value }} receive errors in the last two minutes.'
-          runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-nodenetworkreceiveerrs
-          Summary: "主机{{ $labels.instance }} 网卡{{ $labels.device }} Node网络接受错误  (当前值：{{ $value }})"
-        expr: |
-          increase(node_network_receive_errs_total[2m]) > 10
-        for: 2h
-        labels:
-          severity: p3
-          cluster: RTG
-      - alert: NodeNetworkTransmitErrs
-        annotations:
-          description: '{{ $labels.instance }} interface {{ $labels.device }} has encountered
-            {{ printf "%.0f" $value }} transmit errors in the last two minutes.'
-          runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-nodenetworktransmiterrs
-          Summary: "主机{{ $labels.instance }} 网卡{{ $labels.device }} Node网络传输错误  (当前值：{{ $value }})"
-        expr: |
-          increase(node_network_transmit_errs_total[2m]) > 10
-        for: 1h
-        labels:
-          severity: p3
-          cluster: RTG
-      - alert: NodeHighNumberConntrackEntriesUsed
-        annotations:
-          description: '{{ $value | humanizePercentage }} of conntrack entries are used.'
-          runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-nodehighnumberconntrackentriesused
-          Summary: 主机{{ $labels.instance }} Conntrack条目使用率大于75% (当前值：{{ $value }})
-        expr: |
-          (node_nf_conntrack_entries / node_nf_conntrack_entries_limit) > 0.75
-        labels:
-          severity: p2
-          cluster: RTG
-
-      - alert: NodeTextFileCollectorScrapeError
-        annotations:
-          description: Node Exporter text file collector failed to scrape.
-          runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-nodetextfilecollectorscrapeerror
-          Summary: 主机{{ $labels.instance }} 打开或读取文件时出错,(当前值：{{ $value }})
-        expr: |
-          node_textfile_scrape_error{job="node-exporter|vm-node-exporter"} == 1
-        labels:
-          severity: p2
-          cluster: RTG
-      - alert: NodeClockNotSynchronising
-        annotations:
-          message: Clock on {{ $labels.instance }} is not synchronising. Ensure NTP
-            is configured on this host.
-          runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-nodeclocknotsynchronising
-          Summary: 主机{{ $labels.instance }} 时间不同步(当前值：{{ $value }})
-        expr: |
-          min_over_time(node_timex_sync_status[5m]) == 0
-        for: 10m
-        labels:
-          severity: p4
-          cluster: RTG
 EOF
 ```
 
@@ -865,6 +538,409 @@ kubectl apply -f ~/prometheus-yml/prometheus-Ingress.yml
 mkdir -p ~/prometheus-yml/rules-yml
 ```
 
+hosts.rules
+
+```shell
+cat > ~/prometheus-yml/rules-yml/hosts.rules.yml << 'EOF'
+groups:
+- name: hosts.rules
+  rules:
+  ## Custom By huanghuanhui
+  - alert: HostDown
+    expr: up == 0
+    for: 1m
+    labels:
+      cluster: RTG
+      severity: P1
+    annotations:
+      Summary: '主机{{ $labels.instance }}  ${{ $labels.job }} down'
+      description: "主机: 【{{ $labels.instance }}】has been down for more than 1 minute"
+      
+  - alert: NodeMemoryUsage
+    expr: (node_memory_MemTotal_bytes - (node_memory_MemFree_bytes + node_memory_Buffers_bytes + node_memory_Cached_bytes)) / node_memory_MemTotal_bytes * 100 > 80
+    for: 1m
+    labels:
+      cluster: RTG
+      severity: P1
+    annotations:
+      summary: "{{$labels.instance}}: High Memory usage detected"
+      description: "{{$labels.instance}}: Memory usage is above 80% (current value is: {{ $value }})"
+
+  - alert: HostCpuLoadAvage
+    expr:  node_load5 /count by (instance, job) (node_cpu_seconds_total{mode="idle"}) >= 0.95
+    for: 1m
+    annotations:
+      Summary: "主机{{ $labels.instance }} cpu 5分钟负载比率大于1 (当前值：{{ $value }})"
+      description: "主机: 【{{ $labels.instance }}】 cpu_load5值大于核心数。 (当前比率值：{{ $value }})"
+    labels:
+      cluster: RTG
+      severity: 'P3'
+
+  - alert: HostCpuUsage
+    expr: (1-((sum(increase(node_cpu_seconds_total{mode="idle"}[5m])) by (instance))/ (sum(increase(node_cpu_seconds_total[5m])) by (instance))))*100 > 80
+    for: 1m
+    annotations:
+      Summary: "主机{{ $labels.instance }} CPU 5分钟使用率大于80% (当前值：{{ $value }})"
+      description: "主机: 【{{ $labels.instance }}】 5五分钟内CPU使用率超过80% (当前值：{{ $value }})"
+    labels:
+      cluster: RTG
+      severity: 'P1'
+
+  - alert: HostMemoryUsage
+    expr: (1-((node_memory_Buffers_bytes + node_memory_Cached_bytes + node_memory_MemFree_bytes)/node_memory_MemTotal_bytes))*100 > 80
+    for: 1m
+    annotations:
+      Summary: "主机{{ $labels.instance }} 内存使用率大于80% (当前值：{{ $value }})"
+      description: "主机: 【{{ $labels.instance }}】 内存使用率超过80% (当前使用率：{{ $value }}%)"
+    labels:
+      cluster: RTG
+      severity: 'P3'
+
+  - alert: HostIOWait
+    expr: ((sum(increase(node_cpu_seconds_total{mode="iowait"}[5m])) by (instance))/(sum(increase(node_cpu_seconds_total[5m])) by (instance)))*100 > 10
+    for: 1m
+    annotations:
+      Summary: "主机{{ $labels.instance }} iowait大于10% (当前值：{{ $value }})"
+      description: "主机: 【{{ $labels.instance }}】 5五分钟内磁盘IO过高 (当前负载值：{{ $value }})"
+    labels:
+      cluster: RTG
+      severity: 'P3'
+
+  - alert: HostFileSystemUsage
+    expr: (1-(node_filesystem_free_bytes{fstype=~"ext4|xfs",mountpoint!~".*tmp|.*boot" }/node_filesystem_size_bytes{fstype=~"ext4|xfs",mountpoint!~".*tmp|.*boot" }))*100 > 80
+    for: 1m
+    annotations:
+      Summary: "主机{{ $labels.instance }} {{ $labels.mountpoint }} 磁盘空间使用大于80%  (当前值：{{ $value }})"
+      description: "主机: 【{{ $labels.instance }}】 {{ $labels.mountpoint }}分区使用率超过80%, 当前值使用率：{{ $value }}%"
+    labels:
+      cluster: RTG
+      severity: 'P3'
+
+  - alert: HostSwapIsFillingUp
+    expr: (1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes)) * 100 > 80
+    for: 2m
+    labels:
+      cluster: RTG
+      severity: 'P4'
+    annotations:
+      Summary: "主机: 【{{ $labels.instance }}】 swap分区使用超过 (>80%), 当前值使用率: {{ $value }}%"
+      description: "主机: 【{{ $labels.instance }}】 swap分区使用超过 (>80%), 当前值使用率: {{ $value }}%"
+
+  - alert: HostNetworkConnection-ESTABLISHED
+    expr:  sum(node_netstat_Tcp_CurrEstab) by (instance) > 2000
+    for: 5m
+    labels:
+      cluster: RTG
+      severity: 'P4'
+    annotations:
+      Summary: "主机{{ $labels.instance }} ESTABLISHED连接数过高 (当前值：{{ $value }})"
+      description: "主机: 【{{ $labels.instance }}】 ESTABLISHED连接数超过2000, 当前ESTABLISHED连接数: {{ $value }}"
+
+  - alert: HostNetworkConnection-TIME_WAIT
+    expr:  sum(node_sockstat_TCP_tw) by (instance) > 1000
+    for: 5m
+    labels:
+      cluster: RTG
+      severity: 'P3'
+    annotations:
+      Summary: "主机{{ $labels.instance }} TIME_WAIT连接数过高 (当前值：{{ $value }})"
+      description: "主机: 【{{ $labels.instance }}】 TIME_WAIT连接数超过1000, 当前TIME_WAIT连接数: {{ $value }}"
+
+  - alert: HostUnusualNetworkThroughputIn
+    expr:  sum by (instance, device) (rate(node_network_receive_bytes_total{device=~"eth.*"}[2m])) / 1024 / 1024 > 300
+    for: 5m
+    labels:
+      cluster: RTG
+      severity: 'P3'
+    annotations:
+      Summary: "主机{{ $labels.instance }} 入口流量超过 (> 300 MB/s)  (当前值：{{ $value }})"
+      description: "主机: 【{{ $labels.instance }}】, 网卡: {{ $labels.device }} 入口流量超过 (> 300 MB/s), 当前值: {{ $value }}"
+
+  - alert: HostUnusualNetworkThroughputOut
+    expr: sum by (instance, device) (rate(node_network_transmit_bytes_total{device=~"eth.*"}[2m])) / 1024 / 1024 > 300
+    for: 5m
+    labels:
+      cluster: RTG
+      severity: 'P4'
+    annotations:
+      Summary: "主机{{ $labels.instance }} 出口流量超过 (> 300 MB/s)  (当前值：{{ $value }})"
+      description: "主机: 【{{ $labels.instance }}】, 网卡: {{ $labels.device }} 出口流量超过 (> 300 MB/s), 当前值: {{ $value }}"
+
+  - alert: HostUnusualDiskReadRate
+    expr: sum by (instance, device) (rate(node_disk_read_bytes_total[2m])) / 1024 / 1024 > 50
+    for: 5m
+    labels:
+      cluster: RTG
+      severity: 'P4'
+    annotations:
+      Summary: "主机{{ $labels.instance }} 磁盘读取速率超过(50 MB/s)  (当前值：{{ $value }})"
+      description: "主机: 【{{ $labels.instance }}】, 磁盘: {{ $labels.device }} 读取速度超过(50 MB/s), 当前值: {{ $value }}"
+
+  - alert: HostUnusualDiskWriteRate
+    expr: sum by (instance, device) (rate(node_disk_written_bytes_total[2m])) / 1024 / 1024 > 50
+    for: 2m
+    labels:
+      cluster: RTG
+      severity: 'P4'
+    annotations:
+      Summary: "主机{{ $labels.instance }} 磁盘读写入率超过(50 MB/s)  (当前值：{{ $value }})"
+      description: "主机: 【{{ $labels.instance }}】, 磁盘: {{ $labels.device }} 写入速度超过(50 MB/s), 当前值: {{ $value }}"
+
+  - alert: HostOutOfInodes
+    expr: node_filesystem_files_free{fstype=~"ext4|xfs",mountpoint!~".*tmp|.*boot" } / node_filesystem_files{fstype=~"ext4|xfs",mountpoint!~".*tmp|.*boot" } * 100 < 10
+    for: 2m
+    labels:
+      cluster: RTG
+      severity: 'P3'
+    annotations:
+      Summary: "主机{{ $labels.instance }} {{ $labels.mountpoint }}分区主机Inode值小于5% (当前值：{{ $value }}) "
+      description: "主机: 【{{ $labels.instance }}】 {{ $labels.mountpoint }}分区inode节点不足 (可用值小于{{ $value }}%)"
+
+  - alert: HostUnusualDiskReadLatency
+    expr: rate(node_disk_read_time_seconds_total[2m]) / rate(node_disk_reads_completed_total[2m])  * 1000 > 100 and rate(node_disk_reads_completed_total[2m]) > 0
+    for: 5m
+    labels:
+      cluster: RTG
+      severity: 'P4'
+    annotations:
+      Summary: "主机{{ $labels.instance }} 主机磁盘Read延迟大于100ms (当前值：{{ $value }}ms)"
+      description: "主机: 【{{ $labels.instance }}】, 磁盘: {{ $labels.device }} Read延迟过高 (read operations > 100ms), 当前延迟值: {{ $value }}ms"
+
+  - alert: HostUnusualDiskWriteLatency
+    expr: rate(node_disk_write_time_seconds_total[2m]) / rate(node_disk_writes_completed_total[2m]) * 1000 > 100 and rate(node_disk_writes_completed_total[2m]) > 0
+    for: 5m
+    labels:
+      cluster: RTG
+      severity: 'P4'
+    annotations:
+      Summary: "主机{{ $labels.instance }} 主机磁盘write延迟大于100ms (当前值：{{ $value }}ms)"
+      description: "主机: 【{{ $labels.instance }}】, 磁盘: {{ $labels.device }} Write延迟过高 (write operations > 100ms), 当前延迟值: {{ $value }}ms"
+
+  - alert: NodeFilesystemFilesFillingUp
+    annotations:
+      description: '预计4小时后 分区:{{ $labels.device }}  主机:{{ $labels.instance }} 可用innode仅剩余 {{ printf "%.2f" $value }}%.'
+      runbook_url: https://runbooks.prometheus-operator.dev/runbooks/node/nodefilesystemfilesfillingup
+      Summary: '主机{{ $labels.instance }} 预计4小时后可用innode数会低于15% (当前值：{{ $value }})'
+    labels:
+      cluster: RTG
+      severity: p3
+    expr: |
+      (
+        node_filesystem_files_free{job="node-exporter|vm-node-exporter",fstype!=""} / node_filesystem_files{job="node-exporter|vm-node-exporter",fstype!=""} * 100 < 15
+      and
+        predict_linear(node_filesystem_files_free{job="node-exporter|vm-node-exporter",fstype!=""}[6h], 4*60*60) < 0
+      and
+        node_filesystem_readonly{job="node-exporter|vm-node-exporter",fstype!=""} == 0
+      )
+    for: 1h
+
+  - alert: NodeFileDescriptorLimit
+    annotations:
+      description: '主机:{{ $labels.instance }} 文件描述符使用率超过70% {{ printf "%.2f" $value }}%.'
+      runbook_url: https://runbooks.prometheus-operator.dev/runbooks/node/nodefiledescriptorlimit
+      Summary: '主机: {{ $labels.instance }}文件描述符即将被耗尽. (当前值：{{ $value }})'
+    expr: |
+      (
+        node_filefd_allocated{job="node-exporter|vm-node-exporter"} * 100 / node_filefd_maximum{job="node-exporter|vm-node-exporter"} > 70
+      )
+    for: 15m
+    labels:
+      severity: p3
+      action: monitor
+      cluster: RTG
+
+  - alert: NodeClockSkewDetected
+    annotations:
+      description: '主机: {{ $labels.instance }} 时钟延时超过 300s.'
+      runbook_url: https://runbooks.prometheus-operator.dev/runbooks/node/nodeclockskewdetected
+      Summary: '主机: {{ $labels.instance }}时钟延时超过 300s.(当前值：{{ $value }})'
+    expr: |
+      (
+        node_timex_offset_seconds > 0.05
+      and
+        deriv(node_timex_offset_seconds[5m]) >= 0
+      )
+      or
+      (
+        node_timex_offset_seconds < -0.05
+      and
+        deriv(node_timex_offset_seconds[5m]) <= 0
+      )
+    for: 10m
+    labels:
+      severity: p3
+      cluster: RTG
+
+  - alert: NodeFilesystemFilesFillingUp
+    annotations:
+      description: '预计4小时后 分区:{{ $labels.device }}  主机:{{ $labels.instance }} 可用innode仅剩余 {{ printf "%.2f" $value }}%.'
+      runbook_url: https://runbooks.prometheus-operator.dev/runbooks/node/nodefilesystemfilesfillingup
+      Summary: '主机{{ $labels.instance }} 预计4小时后可用innode数会低于15% (当前值：{{ $value }})'
+    expr: |
+      (
+        node_filesystem_files_free{job="node-exporter|vm-node-exporter",fstype!=""} / node_filesystem_files{job="node-exporter|vm-node-exporter",fstype!=""} * 100 < 15
+      and
+        predict_linear(node_filesystem_files_free{job="node-exporter|vm-node-exporter",fstype!=""}[6h], 4*60*60) < 0
+      and
+        node_filesystem_readonly{job="node-exporter|vm-node-exporter",fstype!=""} == 0
+      )
+    for: 1h
+    labels:
+      severity: p3
+      cluster: RTG
+
+
+  - alert: NodeFilesystemSpaceFillingUp
+    annotations:
+      description: '主机: {{ $labels.instance }} 分区: {{ $labels.device }} 预计在4小时候只有 {{ printf "%.2f" $value }}%.'
+      runbook_url: https://runbooks.prometheus-operator.dev/runbooks/node/nodefilesystemspacefillingup
+      Summary: "主机: {{ $labels.instance }}预计4小时候磁盘空闲会低于15% (当前值：{{ $value }})"
+    expr: |
+      (
+        node_filesystem_avail_bytes{job="node-exporter|vm-node-exporter",fstype!=""} / node_filesystem_size_bytes{job="node-exporter|vm-node-exporter",fstype!=""} * 100 < 15
+      and
+        predict_linear(node_filesystem_avail_bytes{job="node-exporter|vm-node-exporter",fstype!=""}[6h], 4*60*60) < 0
+      and
+        node_filesystem_readonly{job="node-exporter|vm-node-exporter",fstype!=""} == 0
+      )
+    for: 1h
+    labels:
+      severity: p3
+      cluster: RTG
+  - alert: NodeNetworkReceiveErrs
+    annotations:
+      description: '{{ $labels.instance }} interface {{ $labels.device }} has encountered
+        {{ printf "%.0f" $value }} receive errors in the last two minutes.'
+      runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-nodenetworkreceiveerrs
+      Summary: "主机{{ $labels.instance }} 网卡{{ $labels.device }} Node网络接受错误  (当前值：{{ $value }})"
+    expr: |
+      increase(node_network_receive_errs_total[2m]) > 10
+    for: 2h
+    labels:
+      severity: p3
+      cluster: RTG
+  - alert: NodeNetworkTransmitErrs
+    annotations:
+      description: '{{ $labels.instance }} interface {{ $labels.device }} has encountered
+        {{ printf "%.0f" $value }} transmit errors in the last two minutes.'
+      runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-nodenetworktransmiterrs
+      Summary: "主机{{ $labels.instance }} 网卡{{ $labels.device }} Node网络传输错误  (当前值：{{ $value }})"
+    expr: |
+      increase(node_network_transmit_errs_total[2m]) > 10
+    for: 1h
+    labels:
+      severity: p3
+      cluster: RTG
+  - alert: NodeHighNumberConntrackEntriesUsed
+    annotations:
+      description: '{{ $value | humanizePercentage }} of conntrack entries are used.'
+      runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-nodehighnumberconntrackentriesused
+      Summary: 主机{{ $labels.instance }} Conntrack条目使用率大于75% (当前值：{{ $value }})
+    expr: |
+      (node_nf_conntrack_entries / node_nf_conntrack_entries_limit) > 0.75
+    labels:
+      severity: p2
+      cluster: RTG
+
+  - alert: NodeTextFileCollectorScrapeError
+    annotations:
+      description: Node Exporter text file collector failed to scrape.
+      runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-nodetextfilecollectorscrapeerror
+      Summary: 主机{{ $labels.instance }} 打开或读取文件时出错,(当前值：{{ $value }})
+    expr: |
+      node_textfile_scrape_error{job="node-exporter|vm-node-exporter"} == 1
+    labels:
+      severity: p2
+      cluster: RTG
+  - alert: NodeClockNotSynchronising
+    annotations:
+      message: Clock on {{ $labels.instance }} is not synchronising. Ensure NTP
+        is configured on this host.
+      runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-nodeclocknotsynchronising
+      Summary: 主机{{ $labels.instance }} 时间不同步(当前值：{{ $value }})
+    expr: |
+      min_over_time(node_timex_sync_status[5m]) == 0
+    for: 10m
+    labels:
+      severity: p4
+      cluster: RTG
+EOF
+```
+
+kubeadm.rules
+
+```shell
+cat > ~/prometheus-yml/rules-yml/kubeadm.rules.yml << 'EOF'
+groups:
+- name: kubeadm.rules
+  rules:
+
+  # Kubelet 健康状态检查
+  - alert: KubeletDown
+    expr: up{job="kubelet"} == 0
+    for: 1m
+    annotations:
+      summary: "Kubelet 不可用"
+      description: "Kubelet {{ $labels.instance }} 不可用."
+
+
+  # Node 不可用警报：
+  - alert: NodeDown
+    expr: up{job="k8s-nodes"} == 0
+    for: 1m
+    annotations:
+      summary: "Node 不可用"
+      description: "Node {{ $labels.node }} 不可用."
+
+
+  # Kube Proxy 健康状态检查
+  - alert: KubeProxyDown
+    expr: up{job="kube-proxy"} == 0
+    for: 1m
+    annotations:
+      summary: "Kube Proxy 不可用"
+      description: "Kube Proxy {{ $labels.instance }} 不可用."
+
+
+  # Kube Scheduler 健康状态检查
+  - alert: KubeSchedulerDown
+    expr: up{job="kube-scheduler"} == 0
+    for: 1m
+    annotations:
+      summary: "Kube Scheduler 不可用"
+      description: "Kube Scheduler 不可用."
+
+
+  # Kube Controller Manager 健康状态检查
+  - alert: KubeControllerManagerDown
+    expr: up{job="kube-controller-manager"} == 0
+    for: 1m
+    annotations:
+      summary: "Kube Controller Manager 不可用"
+      description: "Kube Controller Manager 不可用."
+
+
+  # Kube State Metrics 健康状态检查
+  - alert: KubeStateMetricsDown
+    expr: up{job="kube-state-metrics"} == 0
+    for: 1m
+    annotations:
+      summary: "Kube State Metrics 不可用"
+      description: "Kube State Metrics 不可用."
+
+
+    # KubernetesNodeNotReady
+  - alert: KubernetesNodeNotReady
+    expr: sum(kube_node_status_condition{condition="Ready",status="true"}) by (node) == 0
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: Kubernetes node is not ready
+      description: A node in the cluster is not ready, which may cause issues with cluster functionality.
+EOF
+```
+
 pod.rules
 
 ```shell
@@ -1045,87 +1121,14 @@ groups:
 EOF
 ```
 
-kubeadm.rules
-
-```shell
-cat > ~/prometheus-yml/rules-yml/kubeadm.rules.yml << 'EOF'
-groups:
-- name: kubeadm.rules
-  rules:
-
-  # Kubelet 健康状态检查
-  - alert: KubeletDown
-    expr: up{job="kubelet"} == 0
-    for: 1m
-    annotations:
-      summary: "Kubelet 不可用"
-      description: "Kubelet {{ $labels.instance }} 不可用."
-
-
-  # Node 不可用警报：
-  - alert: NodeDown
-    expr: up{job="k8s-nodes"} == 0
-    for: 1m
-    annotations:
-      summary: "Node 不可用"
-      description: "Node {{ $labels.node }} 不可用."
-
-
-  # Kube Proxy 健康状态检查
-  - alert: KubeProxyDown
-    expr: up{job="kube-proxy"} == 0
-    for: 1m
-    annotations:
-      summary: "Kube Proxy 不可用"
-      description: "Kube Proxy {{ $labels.instance }} 不可用."
-
-
-  # Kube Scheduler 健康状态检查
-  - alert: KubeSchedulerDown
-    expr: up{job="kube-scheduler"} == 0
-    for: 1m
-    annotations:
-      summary: "Kube Scheduler 不可用"
-      description: "Kube Scheduler 不可用."
-
-
-  # Kube Controller Manager 健康状态检查
-  - alert: KubeControllerManagerDown
-    expr: up{job="kube-controller-manager"} == 0
-    for: 1m
-    annotations:
-      summary: "Kube Controller Manager 不可用"
-      description: "Kube Controller Manager 不可用."
-
-
-  # Kube State Metrics 健康状态检查
-  - alert: KubeStateMetricsDown
-    expr: up{job="kube-state-metrics"} == 0
-    for: 1m
-    annotations:
-      summary: "Kube State Metrics 不可用"
-      description: "Kube State Metrics 不可用."
-
-
-    # KubernetesNodeNotReady
-  - alert: KubernetesNodeNotReady
-    expr: sum(kube_node_status_condition{condition="Ready",status="true"}) by (node) == 0
-    for: 10m
-    labels:
-      severity: critical
-    annotations:
-      summary: Kubernetes node is not ready
-      description: A node in the cluster is not ready, which may cause issues with cluster functionality.
-EOF
-```
-
 ```shell
 # 更新前面创建空的prometheus-rules的ConfigMap
 kubectl create configmap prometheus-rules \
+--from-file=hosts.rules.yml \
+--from-file=kubeadm.rules.yml \
 --from-file=pod.rules.yml \
 --from-file=svc.rules.yml \
 --from-file=pvc.rules.yml \
---from-file=kubeadm.rules.yml \
 -o yaml --dry-run=client | kubectl apply -f -
 ```
 
