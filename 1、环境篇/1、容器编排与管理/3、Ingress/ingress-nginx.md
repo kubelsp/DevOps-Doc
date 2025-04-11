@@ -41,6 +41,9 @@ controller:
   publishService:  # hostNetwork 模式下设置为false，通过节点IP地址上报ingress status数据
     enabled: false
 
+  metrics:
+    enabled: true
+
   kind: DaemonSet
 
   tolerations:   # kubeadm 安装的集群默认情况下 k8s-master 是有污点，需要容忍这个污点才可以部署
