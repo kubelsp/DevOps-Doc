@@ -1,16 +1,16 @@
-## 高可用k8s集群（k8s-1.32.2）
+## 高可用k8s集群（k8s-1.32.3）
 
 [TOC]
 
-containerd-1.6.31 + k8s-1.32.2（最新）（kubeadm方式）（containerd容器运行时版）
+containerd-1.6.31 + k8s-1.32.3（最新）（kubeadm方式）（containerd容器运行时版）
 
-> kubeadm方式安装最新版k8s-1.32.2（containerd容器运行时）
+> kubeadm方式安装最新版k8s-1.32.3（containerd容器运行时）
 >
-> containerd-1.6.31 + k8s-1.32.2（最新）（kubeadm方式）
+> containerd-1.6.31 + k8s-1.32.3（最新）（kubeadm方式）
 
 > containerd-1.6.31
 >
-> k8s-1.32.2
+> k8s-1.32.3
 
 > - k8s-master1（rockylinux-9.5）（4c8g-200g）
 > - k8s-master2（rockylinux-9.5）（4c8g-200g）
@@ -373,7 +373,7 @@ debug: false
 EOF
 ```
 
-### 2、安装k8s（kubeadm-1.32.0、kubelet-1.32.0、kubectl-1.32.0）（官方源）(rockylinux-9.5 )
+### 2、安装k8s（kubeadm-1.32.3、kubelet-1.32.3、kubectl-1.32.3）（官方源）(rockylinux-9.5 )
 
 ```shell
 # 官方源
@@ -396,7 +396,7 @@ EOF
 
 yum makecache
 
-yum -y install kubeadm-1.32.0 kubelet-1.32.0 kubectl-1.32.0
+yum -y install kubeadm-1.32.3 kubelet-1.32.3 kubectl-1.32.3
 
 systemctl enable --now kubelet
 ```
@@ -489,7 +489,7 @@ kube-vip manifest pod \
 curl -u 'elastic:47DFkhHYGFnAde' -X DELETE "http://10.2.254.14:9200/service-log-internal-backend-api-yaf-2025.03---10"
 ````
 
-### 4、初始化 k8s-1.32.0 集群
+### 4、初始化 k8s-1.32.3 集群
 
 ```shell
 mkdir -p ~/kubeadm_init && cd ~/kubeadm_init
@@ -530,7 +530,7 @@ etcd:
     dataDir: /var/lib/etcd
 imageRepository: registry.aliyuncs.com/google_containers
 kind: ClusterConfiguration
-kubernetesVersion: v1.32.0
+kubernetesVersion: v1.32.3
 networking:
   dnsDomain: cluster.local
   podSubnet: 10.244.0.0/16
@@ -551,14 +551,14 @@ EOF
 # 查看所需镜像列表
 kubeadm config images list --config kubeadm-init.yaml
 
-kubeadm config images list --kubernetes-version=v1.31.2 --image-repository registry.aliyuncs.com/google_containers
+kubeadm config images list --kubernetes-version=v1.32.3 --image-repository registry.aliyuncs.com/google_containers
 ```
 
 ```shell
 # 预拉取镜像
 kubeadm config images pull --config kubeadm-init.yaml
 
-kubeadm config images pull --kubernetes-version=v1.31.2 --image-repository registry.aliyuncs.com/google_containers
+kubeadm config images pull --kubernetes-version=v1.32.3 --image-repository registry.aliyuncs.com/google_containers
 ```
 
 ```shell
@@ -583,7 +583,7 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 >
 > https://github.com/projectcalico/calico
 
-> 这里k8s-1.32.0，所以使用calico-v3.29.0版本（版本对应很关键）
+> 这里k8s-1.32.3，所以使用calico-v3.29.0版本（版本对应很关键）
 
 ```shell
 # mkdir -p ~/calico-yml
