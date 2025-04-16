@@ -1,4 +1,10 @@
-### 6、Argo Rollouts
+### Argo Rollouts
+
+>  k8s版本：k8s-v1.32.3
+>
+> argo-rollouts版本：v1.8.2
+>
+> https://github.com/argoproj/argo-rollouts
 
 ```shell
 mkdir -p ~/argo-rollouts-yml
@@ -7,21 +13,15 @@ kubectl create ns argo-rollouts
 ```
 
 ```shell
-# cd ~/argo-rollouts-yml && wget https://github.com/argoproj/argo-rollouts/releases/download/v1.7.1/install.yaml
+cd ~/argo-rollouts-yml && wget https://github.com/argoproj/argo-rollouts/releases/download/v1.8.2/install.yaml
 
-# cd ~/argo-rollouts-yml && wget https://github.com/argoproj/argo-rollouts/releases/download/v1.7.1/dashboard-install.yaml
+cd ~/argo-rollouts-yml && wget https://github.com/argoproj/argo-rollouts/releases/download/v1.8.2/dashboard-install.yaml
 ```
 
 ```shell
-cd ~/argo-rollouts-yml && wget https://gitee.com/kubelsp/upload/raw/master/argo-rollouts/v1.7.1/install.yaml
+sed -i 's#quay.io/argoproj/argo-rollouts:v1.8.2#ccr.ccs.tencentyun.com/huanghuanhui/argo-rollouts:v1.8.2#g' ~/argo-rollouts-yml/install.yaml
 
-cd ~/argo-rollouts-yml && wget https://gitee.com/kubelsp/upload/raw/master/argo-rollouts/v1.7.1/dashboard-install.yaml
-```
-
-```shell
-sed -i 's#quay.io/argoproj/argo-rollouts:v1.7.1#ccr.ccs.tencentyun.com/huanghuanhui/argo-rollouts:v1.7.1#g' ~/argo-rollouts-yml/install.yaml
-
-sed -i 's#quay.io/argoproj/kubectl-argo-rollouts:v1.7.1#ccr.ccs.tencentyun.com/huanghuanhui/argo-rollouts:dashboard-v1.7.1#g' ~/argo-rollouts-yml/dashboard-install.yaml 
+sed -i 's#quay.io/argoproj/kubectl-argo-rollouts:v1.8.2#ccr.ccs.tencentyun.com/huanghuanhui/argo-rollouts:dashboard-v1.8.2#g' ~/argo-rollouts-yml/dashboard-install.yaml 
 ```
 
 ```shell
@@ -31,17 +31,7 @@ kubectl apply -n argo-rollouts -f ~/argo-rollouts-yml/dashboard-install.yaml
 ```
 
 ```shell
-# curl -LO https://github.com/argoproj/argo-rollouts/releases/download/v1.7.1/kubectl-argo-rollouts-linux-amd64
-
-# chmod +x ./kubectl-argo-rollouts-linux-amd64
-
-# mv ./kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
-
-# kubectl argo rollouts version
-```
-
-```shell
-wget https://gitee.com/kubelsp/upload/raw/master/argo-rollouts/v1.7.1/kubectl-argo-rollouts-linux-amd64
+wget https://github.com/argoproj/argo-rollouts/releases/download/v1.8.2/kubectl-argo-rollouts-linux-amd64
 
 chmod +x ./kubectl-argo-rollouts-linux-amd64
 
@@ -88,7 +78,7 @@ EOF
 ```shell
 yum -y install httpd-tools
 
-$ htpasswd -nb admin Admin@2024 > ~/argo-rollouts-yml/auth
+$ htpasswd -nb admin Admin@2025 > ~/argo-rollouts-yml/auth
 
 kubectl create secret generic argo-rollouts-dashboard-auth --from-file=/root/argo-rollouts-yml/auth -n argo-rollouts
 ```
@@ -106,4 +96,4 @@ kubectl apply -f ~/argo-rollouts-yml/argo-rollouts-dashboard-Ingress.yml
 
 > 访问地址：https://argo-rollouts-dashboard.openhhh.com
 >
-> 用户密码：admin、Admin@2024
+> 用户密码：admin、Admin@2025
