@@ -1,8 +1,12 @@
-### nfs-subdir-external-provisioner
+### nfs-storage
 
-k8s（pv 与 pvc）动态存储 StorageClass
-
-k8s-1.30.0 持久化存储（nfs动态存储）
+> k8s（pv 与 pvc）动态存储 StorageClass（nfs动态存储）
+>
+> k8s版本：k8s-v1.32.3
+>
+> 版本：nfs-subdir-external-provisioner-4.0.18
+>
+> https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner
 
 1、部署nfs
 
