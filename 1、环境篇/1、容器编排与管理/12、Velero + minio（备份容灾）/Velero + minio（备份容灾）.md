@@ -1,4 +1,4 @@
-### 11、Velero + minio（备份容灾）
+### Velero + minio（备份容灾）
 
 Velero结合minio实现kubernetes业务数据备份与恢复
 

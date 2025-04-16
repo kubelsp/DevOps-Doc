@@ -1,4 +1,4 @@
-### 9、nfs-subdir-external-provisioner
+### nfs-subdir-external-provisioner
 
 k8s（pv 与 pvc）动态存储 StorageClass
 

@@ -1,4 +1,4 @@
-### 3、ingress-nginx
+### ingress-nginx
 
 helm安装 ingress-nginx（k8s-master边缘节点）
 

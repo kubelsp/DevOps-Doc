@@ -1,4 +1,4 @@
-### 7、kube-state-metrics
+### kube-state-metrics
 
 > 版本：k8s-v1.30.0
 >

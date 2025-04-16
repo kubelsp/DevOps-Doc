@@ -1,4 +1,4 @@
-### 2、MetalLB
+### MetalLB
 
 使用 [MetalLB](https://metallb.universe.tf/installation/) 让 `LoadBalancer` 服务使用 `EXTERNAL-IP`
 

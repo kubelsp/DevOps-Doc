@@ -1,4 +1,4 @@
-### 1、helm、kubens、kubectl补全
+### helm、kubens、kubectl补全
 
 helm
 

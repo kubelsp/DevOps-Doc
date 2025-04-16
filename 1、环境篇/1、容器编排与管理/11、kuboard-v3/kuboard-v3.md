@@ -1,4 +1,4 @@
-### 10、kuboard-v3
+### kuboard-v3
 
 ```shell
 mkdir -p ~/kuboard-v3-yml

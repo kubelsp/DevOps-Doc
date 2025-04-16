@@ -1,4 +1,4 @@
-k8s安装firefox
+###### k8s安装firefox
 
 `````shell
 cat > firefox.yml << 'EOF'

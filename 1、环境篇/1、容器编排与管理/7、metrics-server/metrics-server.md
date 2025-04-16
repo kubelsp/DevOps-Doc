@@ -1,4 +1,4 @@
-### 7、metrics-server
+### metrics-server
 
 > https://github.com/kubernetes-sigs/metrics-server
 
