@@ -99,6 +99,7 @@ spec:
           mountPath: /etc/localtime
         - name: nfs
           mountPath: /nfs
+          subPath: ${AppName}-nfs
       volumes:
       - name: localtime
         hostPath:
