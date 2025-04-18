@@ -306,6 +306,14 @@ curl -s --header "PRIVATE-TOKEN: glpat-rfmpkUrwCgSaPBmst6h5"   "http://10.1.13.2
 "hhh"
 "Jenkins"
 "DevOps-Doc"
+
+
+curl -s --header "PRIVATE-TOKEN: glpat-rfmpkUrwCgSaPBmst6h5"   "http://gitlab-svc-canary/api/v4/projects?per_page=100&page=1" | jq '.[].name'
+"hhh"
+"Jenkins"
+"DevOps-Doc"
+
+curl -s --header "PRIVATE-TOKEN: glpat-rfmpkUrwCgSaPBmst6h5"   "http://gitlab-svc-stable/api/v4/projects?per_page=100&page=1" | jq '.[].name'
 ```
 
 ````shell
@@ -500,3 +508,35 @@ chmod +x gitlab_clone_by_namespace.sh
 ````
 
 ===
+
+`````shell
+cat > gitlab-backup.sh << 'EOF'
+#!/bin/bash
+
+# 设置变量
+GITLAB_TOKEN="glpat-rfmpkUrwCgSaPBmst6h5"
+GITLAB_API="http://10.1.13.205:30325/api/v4/projects"
+BACKUP_ROOT="./backup"
+TODAY=$(date +%Y%m%d)
+
+# 获取项目列表
+project_urls=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_TOKEN" "$GITLAB_API" | jq -r '.[].http_url_to_repo')
+
+# 遍历每个项目地址
+for url in $project_urls; do
+  # 提取项目名
+  repo_name=$(basename "$url" .git)
+
+  # 创建备份目录结构
+  backup_dir="$BACKUP_ROOT/$repo_name/$TODAY"
+  mkdir -p "$backup_dir"
+
+  # 克隆仓库（--mirror 或 --bare 可选）
+  echo "📦 正在备份 $repo_name 到 $backup_dir"
+  git clone --quiet "$url" "$backup_dir"
+done
+
+echo "✅ 所有项目备份完成！"
+EOF
+`````
+
