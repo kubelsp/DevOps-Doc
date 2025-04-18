@@ -202,7 +202,7 @@ kubectl apply -f ~/gitlab-yml/gitlab-Ingress.yml
 
 ===
 
-
+k8s-cronjob 计划任务备份
 
 ```shell
 cat > gitlab-backup-job.yml << 'EOF'
