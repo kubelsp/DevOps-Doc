@@ -202,7 +202,7 @@ kubectl apply -f ~/gitlab-yml/gitlab-Ingress.yml
 
 ===
 
-k8s-cronjob 计划任务备份
+备份1：k8s-cronjob 计划任务备份
 
 ```shell
 cat > gitlab-backup-job.yml << 'EOF'
@@ -271,6 +271,26 @@ spec:
                   echo "✅ 备份完成，文件保存在 /var/opt/gitlab/backups/，文件名: $BACKUP_FILE"
 EOF
 ```
+
+备份2：克隆所有项目存储到pvc
+
+```shell
+cat > ~/gitlab-yml/gitlab-backup-pvc.yml << 'EOF'
+apiVersion: v1
+kind:  PersistentVolumeClaim
+metadata:
+  name: gitlab-backup-pvc
+  namespace: gitlab
+spec:
+  storageClassName: "dev-sc"
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 2Ti
+EOF
+```
+
+
 
 **HTTP Clone 拉代码（用户名 + 密码 或 Personal Access Token）**
 
