@@ -21,7 +21,9 @@ cd ~/argo-rollouts-yml && wget https://github.com/argoproj/argo-rollouts/release
 ```shell
 sed -i 's#quay.io/argoproj/argo-rollouts:v1.8.2#ccr.ccs.tencentyun.com/huanghuanhui/argo-rollouts:v1.8.2#g' ~/argo-rollouts-yml/install.yaml
 
-sed -i 's#quay.io/argoproj/kubectl-argo-rollouts:v1.8.2#ccr.ccs.tencentyun.com/huanghuanhui/argo-rollouts:dashboard-v1.8.2#g' ~/argo-rollouts-yml/dashboard-install.yaml 
+sed -i 's#quay.io/argoproj/kubectl-argo-rollouts:v1.8.2#ccr.ccs.tencentyun.com/huanghuanhui/argo-rollouts:dashboard-v1.8.2#g' ~/argo-rollouts-yml/dashboard-install.yaml
+
+sed -i 's/replicas: 1/replicas: 3/' ~/argo-rollouts-yml/install.yaml
 ```
 
 ```shell
@@ -29,6 +31,14 @@ kubectl apply -n argo-rollouts -f ~/argo-rollouts-yml/install.yaml
 
 kubectl apply -n argo-rollouts -f ~/argo-rollouts-yml/dashboard-install.yaml
 ```
+
+```shell
+kubectl get lease -n argo-rollouts
+
+kubectl describe lease -n argo-rollouts
+```
+
+
 
 ```shell
 wget https://github.com/argoproj/argo-rollouts/releases/download/v1.8.2/kubectl-argo-rollouts-linux-amd64
