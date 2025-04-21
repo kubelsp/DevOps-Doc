@@ -289,7 +289,8 @@ kubectl apply -f ~/jenkins-yml/jenkins-ingress.yml
 
 http://jenkins.jenkins:8080
 
-https://mirrors.tuna.tsinghua.edu.cn/jenkins/updates/update-center.json
+https://updates.jenkins.io/update-center.json
+https://mirrors.huaweicloud.com/jenkins/updates/update-center.json
 ```
 
 ```shell
