@@ -76,11 +76,11 @@ spec:
   type: NodePort
   ports:
   - name: web
-    nodePort: 30456
+    nodePort: 30798
     port: 8080
     targetPort: web
   - name: agent
-    nodePort: 30789
+    nodePort: 30897
     port: 50000
     targetPort: agent
 EOF
@@ -105,7 +105,7 @@ spec:
     port: 8080
     targetPort: web
   - name: agent
-    nodePort: 30788
+    nodePort: 30654
     port: 50000
     targetPort: agent
 EOF
