@@ -217,7 +217,7 @@ spec:
       volumes:
       - name: jenkins-home
         persistentVolumeClaim:
-          claimName: jenkins-home
+          claimName: jenkins-pvc
       - name: localtime
         hostPath:
           path: /etc/localtime
