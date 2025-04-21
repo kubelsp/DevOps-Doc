@@ -293,11 +293,11 @@ https://mirrors.tuna.tsinghua.edu.cn/jenkins/updates/update-center.json
 ```
 
 ```shell
-cat > ~/jenkins-yml/jenkins-slave-maven-cache.yml << 'EOF'
+cat > ~/jenkins-yml/jenkins-slave-maven-cache-pvc.yml << 'EOF'
 apiVersion: v1
 kind:  PersistentVolumeClaim
 metadata:
-  name: jenkins-slave-maven-cache
+  name: jenkins-slave-maven-cache-pvc
   namespace: jenkins
 spec:
   storageClassName: "nfs-storage"
@@ -309,11 +309,11 @@ EOF
 ```
 
 ```shell
-cat > ~/jenkins-yml/jenkins-slave-node-cache.yml << 'EOF'
+cat > ~/jenkins-yml/jenkins-slave-node-cache-pvc.yml << 'EOF'
 apiVersion: v1
 kind:  PersistentVolumeClaim
 metadata:
-  name: jenkins-slave-node-cache
+  name: jenkins-slave-node-cache-pvc
   namespace: jenkins
 spec:
   storageClassName: "nfs-storage"
@@ -325,11 +325,11 @@ EOF
 ```
 
 ```shell
-cat > ~/jenkins-yml/jenkins-slave-golang-cache.yml << 'EOF'
+cat > ~/jenkins-yml/jenkins-slave-golang-cache-pvc.yml << 'EOF'
 apiVersion: v1
 kind:  PersistentVolumeClaim
 metadata:
-  name: jenkins-slave-golang-cache
+  name: jenkins-slave-golang-cache-pvc
   namespace: jenkins
 spec:
   storageClassName: "nfs-storage"
@@ -339,11 +339,11 @@ spec:
       storage: 2Ti
 EOF
 
-cat > ~/jenkins-yml/jenkins-slave-go-build-cache.yml << 'EOF'
+cat > ~/jenkins-yml/jenkins-slave-go-build-cache-pvc.yml << 'EOF'
 apiVersion: v1
 kind:  PersistentVolumeClaim
 metadata:
-  name: jenkins-slave-go-build-cache
+  name: jenkins-slave-go-build-cache-pvc
   namespace: jenkins
 spec:
   storageClassName: "nfs-storage"
