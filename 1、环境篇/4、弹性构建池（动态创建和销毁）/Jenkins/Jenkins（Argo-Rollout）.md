@@ -545,3 +545,65 @@ g++ -o HelloWorld-cpp HelloWorld.cpp && ./HelloWorld-cpp
     }
 }
 ```
+
+Jenkins 备份
+
+```shell
+cat > ~/jenkins-yml/jenkins-backup-pvc.yml << 'EOF'
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-backup-pvc
+  namespace: jenkins
+spec:
+  storageClassName: "nfs-storage"
+  accessModes: [ReadWriteMany]
+  resources:
+    requests:
+      storage: 2Ti
+EOF
+```
+
+```shell
+cat > ~/jenkins-yml/jenkins-backup-cronjob.yml << 'EOF'
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: jenkins-backup
+  namespace: jenkins
+spec:
+  schedule: "0 2 * * *"  # 每天凌晨2点
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: jenkins-admin
+          restartPolicy: OnFailure
+          containers:
+          - name: jenkins-backup
+            image: alpine:3.18
+            command:
+              - /bin/sh
+              - -c
+              - |
+                BACKUP_DIR="/backup/jenkins-$(date +%F-%H-%M-%S)"
+                mkdir -p "$BACKUP_DIR"
+                cp -r /var/jenkins_home/* "$BACKUP_DIR"
+                echo "Backup completed: $BACKUP_DIR"
+            volumeMounts:
+              - name: jenkins-home
+                mountPath: /var/jenkins_home
+              - name: backup
+                mountPath: /backup
+          volumes:
+            - name: jenkins-home
+              persistentVolumeClaim:
+                claimName: jenkins-pvc
+            - name: backup
+              persistentVolumeClaim:
+                claimName: jenkins-backup-pvc
+EOF
+```
+
