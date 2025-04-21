@@ -1,6 +1,6 @@
 ### Jenkins（Argo-Rollout）
 
-k8s手撕yml方式部署最新版 Jenkins-2.485（jdk-21版）（Jenkins）
+k8s手撕yml方式部署最新版 Jenkins-2.506（jdk-21版）（Jenkins）
 
 > https://github.com/jenkinsci/jenkins
 >
@@ -8,7 +8,7 @@ k8s手撕yml方式部署最新版 Jenkins-2.485（jdk-21版）（Jenkins）
 >
 > k8s-v1.31.2
 >
-> Jenkins-2.485
+> Jenkins-2.506
 
 ```shell
 mkdir -p ~/jenkins-yml
@@ -24,86 +24,36 @@ kubectl label node k8s-node1 jenkins=jenkins
 
 ```shell
 cat > ~/jenkins-yml/jenkins-rbac.yml << 'EOF'
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: jenkins
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: jenkins
+  name: jenkins-admin
   namespace: jenkins
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  annotations:
-    rbac.authorization.kubernetes.io/autoupdate: "true"
-  labels:
-    kubernetes.io/bootstrapping: rbac-defaults
-  name: jenkins
+  name: jenkins-admin
 rules:
-- apiGroups:
-  - '*'
-  resources:
-  - statefulsets
-  - services
-  - replicationcontrollers
-  - replicasets
-  - podtemplates
-  - podsecuritypolicies
-  - pods
-  - pods/log
-  - pods/exec
-  - podpreset
-  - poddisruptionbudget
-  - persistentvolumes
-  - persistentvolumeclaims
-  - jobs
-  - endpoints
-  - deployments
-  - deployments/scale
-  - daemonsets
-  - cronjobs
-  - configmaps
-  - namespaces
-  - events
-  - secrets
-  verbs:
-  - create
-  - get
-  - watch
-  - delete
-  - list
-  - patch
-  - update
-- apiGroups:
-  - ""
-  resources:
-  - nodes
-  verbs:
-  - get
-  - list
-  - watch
-  - update
+  - apiGroups: [""]
+    resources: ["*"]
+    verbs: ["*"]
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  annotations:
-    rbac.authorization.kubernetes.io/autoupdate: "true"
-  labels:
-    kubernetes.io/bootstrapping: rbac-defaults
-  name: jenkins
+  name: jenkins-admin
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: jenkins
+  name: jenkins-admin
 subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: Group
-  name: system:serviceaccounts:jenkins
+- kind: ServiceAccount
+  name: jenkins-admin
+  namespace: jenkins
 EOF
 ```
 
@@ -226,10 +176,16 @@ spec:
         operator: Exists
       nodeSelector:
         jenkins: jenkins
+      serviceAccountName: jenkins-admin
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      #securityContext:
+        #runAsUser: 0
       containers:
       - name: jenkins
-        #image: jenkins/jenkins:2.485-jdk21
-        image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins:2.485-jdk21
+        #image: jenkins/jenkins:2.506-jdk21
+        image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins:2.506-jdk21
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -245,8 +201,6 @@ spec:
           requests:
             cpu: "1"
             memory: "2Gi"
-        securityContext:
-          runAsUser: 0
         env:
         - name: LIMITS_MEMORY
           valueFrom:
