@@ -178,10 +178,7 @@ spec:
         jenkins: jenkins
       serviceAccountName: jenkins-admin
       securityContext:
-        runAsUser: 1000
-        fsGroup: 1000
-      #securityContext:
-        #runAsUser: 0
+        fsGroup: 0
       containers:
       - name: jenkins
         #image: jenkins/jenkins:2.506-jdk21
