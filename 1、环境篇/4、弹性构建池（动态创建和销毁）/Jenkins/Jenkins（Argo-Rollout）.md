@@ -451,10 +451,10 @@ spec:
     emptyDir: {}
   - name: maven-cache
     persistentVolumeClaim:
-      claimName: jenkins-slave-maven-cache
+      claimName: jenkins-slave-maven-cache-pvc
   - name: node-cache
     persistentVolumeClaim:
-      claimName: jenkins-slave-node-cache
+      claimName: jenkins-slave-node-cache-pvc
 '''
         }
     }
