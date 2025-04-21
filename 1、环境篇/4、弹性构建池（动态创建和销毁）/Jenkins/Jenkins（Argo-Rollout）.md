@@ -66,8 +66,8 @@ cat > ~/jenkins-yml/jenkins-svc-stable.yml << 'EOF'
 apiVersion: v1
 kind: Service
 metadata:
-  name: jenkins
-  namespace: jenkins-svc-stable
+  name: jenkins-svc-stable
+  namespace: jenkins
   labels:
     app: jenkins
 spec:
@@ -91,8 +91,8 @@ cat > ~/jenkins-yml/jenkins-svc-canary.yml << 'EOF'
 apiVersion: v1
 kind: Service
 metadata:
-  name: jenkins
-  namespace: jenkins-svc-canary
+  name: jenkins-svc-canary
+  namespace: jenkins
   labels:
     app: jenkins
 spec:
