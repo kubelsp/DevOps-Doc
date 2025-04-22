@@ -50,7 +50,7 @@ spec:
                 - /bin/bash
                 - -c
                 - |
-                  kubectl get po -n live-jingsocial |grep 0/ | grep -v 'clean-failed-pods' | awk '{print $1}' | xargs -i kubectl delete pod {} -n live-jingsocial
+                  kubectl get po -n prod |grep 0/ | grep -v 'clean-failed-pods' | awk '{print $1}' | xargs -i kubectl delete pod {} -n prod
           restartPolicy: OnFailure
 EOF
 ````
