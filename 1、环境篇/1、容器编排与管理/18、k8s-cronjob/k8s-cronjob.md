@@ -45,7 +45,7 @@ spec:
           serviceAccountName: pod-cleaner-admin
           containers:
             - name: clean-failed-pods
-              image: registry.cn-hangzhou.aliyuncs.com/jingsocial/kubectl:bitnami-1.32.3
+              image: ccr.ccs.tencentyun.com/huanghuanhui/kubectl:bitnami-1.32.3
               command:
                 - /bin/bash
                 - -c
