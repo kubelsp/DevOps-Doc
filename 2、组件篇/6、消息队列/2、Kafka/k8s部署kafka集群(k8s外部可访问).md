@@ -102,7 +102,7 @@ data:
     if [[ $HOSTNAME =~ (.*)-([0-9]+)$ ]]; then
       ORD=${BASH_REMATCH[2]}
       PORT=$((ORD + 30092))
-      export KAFKA_CFG_ADVERTISED_LISTENERS="PLAINTEXT://10.1.8.4:$PORT"
+      export KAFKA_CFG_ADVERTISED_LISTENERS="PLAINTEXT://1.12.51.148:$PORT"
     else
       echo "Failed to get index from hostname $HOSTNAME"
       exit 1
@@ -209,7 +209,7 @@ spec:
 EOF
 ```
 
-> 10.1.8.4（换成node节点内网或者外网ip）
+> 1.12.51.148（换成node节点外网ip）(内网ip不行)
 
 ```shell
 kubectl apply -f ~/kafka-yml/kafka.yml

@@ -103,8 +103,8 @@ spec:
         command:
         - /opt/leaderchain/setup.sh
         env:
-        - name: KAFKA_HEAP_OPTS # kafka的堆内存配置，默认为1g，这里设置为2g
-          value: "-Xms2G -Xmx2G"
+        - name: KAFKA_HEAP_OPTS # kafka的堆内存配置，默认为1g，这里设置为2-4g
+          value: "-Xmx4096m -Xms2048m"
         - name: BITNAMI_DEBUG
           value: "true" # true 详细日志
         # KRaft settings 
