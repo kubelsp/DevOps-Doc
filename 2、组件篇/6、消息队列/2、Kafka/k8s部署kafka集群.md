@@ -73,6 +73,7 @@ spec:
       app: kafka
   serviceName: kafka-headless
   podManagementPolicy: Parallel
+  #replicas: 5 # 部署完成后，将会创建 5 个 Kafka 副本
   replicas: 3 # 部署完成后，将会创建 3 个 Kafka 副本
   updateStrategy:
     type: RollingUpdate
@@ -102,6 +103,8 @@ spec:
         command:
         - /opt/leaderchain/setup.sh
         env:
+        - name: KAFKA_HEAP_OPTS # kafka的堆内存配置，默认为1g，这里设置为2g
+          value: "-Xms2G -Xmx2G"
         - name: BITNAMI_DEBUG
           value: "true" # true 详细日志
         # KRaft settings 
@@ -112,6 +115,7 @@ spec:
         - name: KAFKA_CFG_PROCESS_ROLES
           value: "controller,broker"
         - name: KAFKA_CFG_CONTROLLER_QUORUM_VOTERS
+          #value: "0@kafka-0.kafka-headless:9093,1@kafka-1.kafka-headless:9093,2@kafka-2.kafka-headless:9093,3@kafka-3.kafka-headless:9093,4@kafka-4.kafka-headless:9093"
           value: "0@kafka-0.kafka-headless:9093,1@kafka-1.kafka-headless:9093,2@kafka-2.kafka-headless:9093"
         - name: KAFKA_KRAFT_CLUSTER_ID
           value: "Jc7hwCMorEyPprSI1Iw4sW"  
@@ -163,6 +167,8 @@ EOF
 kubectl apply -f ~/kafka-yml/kafka.yml
 ```
 
+> 代码连接地址：kafka-headless.kafka:9092
+
 ###### kafka-ui
 
 ```shell
@@ -193,7 +199,7 @@ spec:
         - name: KAFKA_CLUSTERS_0_NAME
           value: 'kafka-elk'
         - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
-          value: 'kafka-headless:9092'
+          value: 'kafka-headless.kafka:9092'
         - name: DYNAMIC_CONFIG_ENABLED
           value: "true"
         - name: AUTH_TYPE # https://docs.kafka-ui.provectus.io/configuration/authentication/basic-authentication
@@ -201,7 +207,7 @@ spec:
         - name: SPRING_SECURITY_USER_NAME
           value: "admin"    
         - name: SPRING_SECURITY_USER_PASSWORD
-          value: "Admin@2024"
+          value: "Admin@2025"
         ports:
         - name: web
           containerPort: 8080
@@ -270,4 +276,38 @@ kubectl apply -f ~/kafka-yml/kafka-ui-Ingress.yml
 
 > 访问地址：https://kafka-ui.openhhh.com
 >
-> 账号密码：admin、Admin@2024
+> 账号密码：admin、Admin@2025
+
+#### **查看所有 Topic**
+
+`````shell
+kafka-topics.sh --bootstrap-server localhost:9092 --list
+kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic <topic-name>
+`````
+
+#### **查看 Broker 列表**
+
+````shell
+kafka-broker-api-versions.sh --bootstrap-server localhost:9092
+````
+
+**🔍 经验参考（中等规模日志系统）**
+
+| **业务量**      | **Broker Pod 数** | **每 Pod 配置**   |
+| --------------- | ----------------- | ----------------- |
+| 每天 1 亿条日志 | 5 个 Kafka Pod    | 2 vCPU / 8Gi 内存 |
+| 每天 3～5 亿条  | 7～9 个           | 4 vCPU / 16Gi     |
+
+**🎯 总结：**
+
+
+
+​	对你这个 “每天 1 亿条日志” 的 Kafka 集群，建议如下配置：
+
+| **项目**     | **配置**                       |
+| ------------ | ------------------------------ |
+| Broker 数量  | 5 个 StatefulSet Pod           |
+| CPU per Pod  | requests: 1, limits: 2～4 vCPU |
+| 内存 per Pod | requests: 4Gi, limits: 8～12Gi |
+| Kafka Heap   | -Xms2G -Xmx2G                  |
+| 存储 per Pod | 500Gi～1Ti，SSD 类型 PVC       |
