@@ -378,8 +378,8 @@ spec:
     effect: "NoSchedule"
   containers:
   - name: docker
-    #image: docker:27.1.1
-    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:27.1.1
+    #image: docker:28.1.1
+    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:28.1.1
     imagePullPolicy: IfNotPresent
     readinessProbe:
       exec:
@@ -392,8 +392,8 @@ spec:
     - name: docker-socket
       mountPath: /var/run
   - name: docker-daemon
-    #image: docker:27.1.1-dind
-    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:27.1.1-dind
+    #image: docker:28.1.1-dind
+    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:28.1.1-dind
     imagePullPolicy: IfNotPresent
     securityContext:
       privileged: true
@@ -423,16 +423,16 @@ spec:
     - name: node-cache
       mountPath: /root/.npm
   - name: golang
-    #image: golang:1.22.2
-    image: ccr.ccs.tencentyun.com/huanghuanhui/golang:1.22.2
+    #image: golang:1.24.2
+    image: ccr.ccs.tencentyun.com/huanghuanhui/golang:1.24.2
     imagePullPolicy: IfNotPresent
     command:
     - sleep
     args:
     - 99d
   - name: gcc
-    #image: gcc:13.2.0
-    image: ccr.ccs.tencentyun.com/huanghuanhui/gcc:13.2.0
+    #image: gcc:15.1.0
+    image: ccr.ccs.tencentyun.com/huanghuanhui/gcc:15.1.0
     imagePullPolicy: IfNotPresent
     command:
     - sleep
