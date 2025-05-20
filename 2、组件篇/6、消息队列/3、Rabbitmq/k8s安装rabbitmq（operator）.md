@@ -100,6 +100,6 @@ https://github.com/rabbitmq/cluster-operator/blob/main/docs/examples/community-p
 
 > 1、web访问地址：http://192.168.1.213:30336
 >
-> 2、代码连接地址：ip：192.168.1.213、端口：30334(对应默认5672)
+> 2、代码连接地址：rabbitmq-nodes.rabbitmq-system.svc.cluster.local:5672
 >
-> 用户密码：guest、guest@2023
+> 用户密码：rabbitmq、CoCc5DW7lzCzJmkr
