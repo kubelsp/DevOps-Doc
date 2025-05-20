@@ -9,7 +9,17 @@ kubectl create ns kafka
 ```
 
 ```shell
-cat > values-prod.yaml << 'EOF'
+helm repo add bitnami "https://helm-charts.itboon.top/bitnami" --force-update
+
+helm repo update
+
+helm search repo bitnami/kafka -l
+
+helm pull bitnami/kafka --version 32.1.2 --untar
+```
+
+```shell
+cat > ~/kafka-helm/kafka/values-prod.yaml << 'EOF'
 global:
   security:
     allowInsecureImages: true
@@ -62,7 +72,7 @@ helm upgrade --install --namespace kafka kafka -f ./values-prod.yaml .
 ###### kafka-ui
 
 ```shell
-cat > ~/kafka-yml/kafka-ui.yml << 'EOF'
+cat > ~/kafka-helm/kafka/kafka-ui.yml << 'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -120,11 +130,11 @@ EOF
 ```
 
 ```shell
-kubectl apply -f ~/kafka-yml/kafka-ui.yml
+kubectl apply -f ~/kafka-helm/kafka/kafka-ui.yml
 ```
 
 ```shell
-cat > ~/kafka-yml/kafka-ui-Ingress.yml << 'EOF'
+cat > ~/kafka-helm/kafka/kafka-ui-Ingress.yml << 'EOF'
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
