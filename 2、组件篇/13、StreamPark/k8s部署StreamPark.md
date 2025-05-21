@@ -13,15 +13,12 @@ FROM ccr.ccs.tencentyun.com/huanghuanhui/docker:28.0.4
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tencent.com/g' /etc/apk/repositories && \
     apk update && apk add openjdk8 bash && \
     echo 'export JAVA_HOME=/usr/lib/jvm/java-1.8-openjdk' >> /etc/profile && \
-
     mkdir -p /apache-streampark_2.12-2.1.5 && \
     mkdir -p /streampark_workspace && \
     mkdir -p ~/.kube && \
-
     wget https://mirrors.cloud.tencent.com/apache/streampark/2.1.5/apache-streampark_2.12-2.1.5-incubating-bin.tar.gz && \
     tar xf apache-streampark_2.12-2.1.5-incubating-bin.tar.gz -C /apache-streampark_2.12-2.1.5 --strip-components=1 && \
     rm -rf apache-streampark_2.12-2.1.5-incubating-bin.tar.gz && \
-
     wget -O /apache-streampark_2.12-2.1.5/lib/mysql-connector-java-8.0.28.jar \
     https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.28/mysql-connector-java-8.0.28.jar
 
