@@ -106,7 +106,7 @@ RUN mkdir ~/clash && \
 ADD clash /usr/local/bin/clash
 
 ADD Country.mmdb /root/clash/Country.mmdb
-ADD config.yaml root/clash/config.yaml
+# ADD config.yaml root/clash/config.yaml
 
 CMD ["sh", "-c", "cd /root/clash && clash -d ."]
 EOF
