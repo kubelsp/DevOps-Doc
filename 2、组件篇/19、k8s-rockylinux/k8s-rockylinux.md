@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: k8s-rockylinux
-        image: rockylinux/rockylinux:9.5
+        #image: rockylinux/rockylinux:9.5
         image: ccr.ccs.tencentyun.com/huanghuanhui/rockylinux:9.5
         command: ["/bin/bash", "-c", "sleep infinity"]
 EOF
