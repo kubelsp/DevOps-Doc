@@ -1,13 +1,13 @@
 k8s-shadowsocks
 
 ```shell
-mkdir -p ~/k8s-shadowsocks
+mkdir -p ~/k8s-shadowsocks-yml
 
 kubectl create ns shadowsocks
 ```
 
 ````shell
-cat > ~/k8s-shadowsocks/shadowsocks.yaml << 'EOF'
+cat > ~/k8s-shadowsocks-yml/shadowsocks.yaml << 'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -41,7 +41,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: shadowsocks
+  name: shadowsocks-svc
   namespace: shadowsocks
 spec:
   selector:
@@ -60,6 +60,6 @@ EOF
 ````
 
 ```shel
-kubectl apply -f ~/k8s-shadowsocks/shadowsocks.yaml
+kubectl apply -f ~/k8s-shadowsocks-yml/shadowsocks.yaml
 ```
 
