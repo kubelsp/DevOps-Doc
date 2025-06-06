@@ -146,23 +146,23 @@ lsmod | grep -e ip_vs -e nf_conntrack
 
 ```shell
 # 8、开启br_netfilter、ipv4 路由转发
-cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+cat > /etc/modules-load.d/k8s.conf << 'EOF'
 overlay
 br_netfilter
 EOF
 
-sudo modprobe overlay
-sudo modprobe br_netfilter
+modprobe -- overlay
+modprobe -- br_netfilter
 
 # 设置所需的 sysctl 参数，参数在重新启动后保持不变
-cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+cat > /etc/sysctl.d/k8s.conf << 'EOF'
 net.bridge.bridge-nf-call-iptables  = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 net.ipv4.ip_forward                 = 1
 EOF
 
 # 应用 sysctl 参数而不重新启动
-sudo sysctl --system
+sysctl --system
 
 # 查看是否生效
 lsmod | grep br_netfilter
@@ -234,7 +234,7 @@ net.core.bpf_jit_harden=1
 net.ipv4.tcp_max_tw_buckets=32768
 fs.inotify.max_user_instances=8192
 net.core.bpf_jit_kallsyms=1
-vm.max_map_count=262144
+vm.max_map_count=2000000 # 这个参数对于运行 Elasticsearch、Kafka、Prometheus、大型 Java 程序 这些需要大量 mmap 的服务非常重要
 kernel.threads-max=262144
 net.core.bpf_jit_enable=1
 net.ipv4.tcp_keepalive_time=600
@@ -243,15 +243,13 @@ net.core.wmem_max=16777216
 net.ipv4.neigh.default.gc_thresh1=2048
 net.core.somaxconn=32768
 net.ipv4.neigh.default.gc_thresh3=8192
-net.ipv4.ip_forward=1
 net.ipv4.neigh.default.gc_thresh2=4096
 net.ipv4.tcp_max_syn_backlog=8096
-net.bridge.bridge-nf-call-iptables=1
 net.ipv4.tcp_rmem=4096  12582912        16777216
 EOF
 
 # 应用 sysctl 参数而不重新启动
-sudo sysctl --system
+sysctl --system
 ```
 
 ```shell
