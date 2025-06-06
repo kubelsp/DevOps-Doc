@@ -443,6 +443,8 @@ export VIP=192.168.1.10
 
 export INTERFACE=ens160
 
+alias kube-vip="ctr image pull ghcr.io/kube-vip/kube-vip:$KVVERSION; ctr run --rm --net-host ghcr.io/kube-vip/kube-vip:$KVVERSION vip /kube-vip"
+
 kube-vip manifest pod \
     --interface $INTERFACE \
     --address $VIP \
