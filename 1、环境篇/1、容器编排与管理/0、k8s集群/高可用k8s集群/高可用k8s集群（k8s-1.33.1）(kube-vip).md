@@ -96,6 +96,8 @@ systemctl enable ntpd --now
 
 ```shell
 # 4、永久关闭seLinux(需重启系统生效)
+getenforce
+
 setenforce 0
 sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
 ```
