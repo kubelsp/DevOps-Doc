@@ -119,18 +119,29 @@ iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X && ipt
 # 7、加载IPVS模块
 yum -y install ipset ipvsadm
 
-mkdir -p /etc/sysconfig/modules
-cat > /etc/sysconfig/modules/ipvs.modules <<EOF
-modprobe -- ip_vs
-modprobe -- ip_vs_rr
-modprobe -- ip_vs_wrr
-modprobe -- ip_vs_sh
-modprobe -- nf_conntrack
+cat > /etc/modules-load.d/ipvs.conf << 'EOF'
+ip_vs_wrr
+ip_vs_rr
+ip_vs_lc
+ip_vs_dh
+ip_vs_sh
+ip_vs_sed
+ip_vs_nq
+nf_conntrack
 EOF
 
+# systemctl restart systemd-modules-load
+
+modprobe -- ip_vs_wrr
+modprobe -- ip_vs_rr
+modprobe -- ip_vs_lc
+modprobe -- ip_vs_dh
+modprobe -- ip_vs_sh
+modprobe -- ip_vs_sed
+modprobe -- ip_vs_nq
 modprobe -- nf_conntrack
 
-chmod 755 /etc/sysconfig/modules/ipvs.modules && bash /etc/sysconfig/modules/ipvs.modules && lsmod | grep -e ip_vs -e nf_conntrack
+lsmod | grep -e ip_vs -e nf_conntrack
 ```
 
 ```shell
