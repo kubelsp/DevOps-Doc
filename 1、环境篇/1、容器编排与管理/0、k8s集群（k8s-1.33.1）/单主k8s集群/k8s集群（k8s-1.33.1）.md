@@ -1,23 +1,23 @@
-### k8s集群（k8s-1.33.0）
+### k8s集群（k8s-1.33.1）
 
 [TOC]
 
-containerd-1.7.27 + k8s-1.33.0（最新）（kubeadm方式）（containerd容器运行时版）
+containerd-1.7.27 + k8s-1.33.1（最新）（kubeadm方式）（containerd容器运行时版）
 
-> kubeadm方式安装最新版k8s-1.33.0（containerd容器运行时）
+> kubeadm方式安装最新版k8s-1.33.1（containerd容器运行时）
 >
-> containerd-1.7.27 + k8s-1.32.3（最新）（kubeadm方式）
+> containerd-1.7.27 + k8s-1.33.1（最新）（kubeadm方式）
 
 > containerd-1.7.27
 >
-> k8s-1.33.0
+> k8s-1.33.1
 
-> - k8s-master（rocky-9.5）（4c8g-200g）
-> - k8s-node1（rocky-9.5）（8c16g-200g）
-> - k8s-node2（rocky-9.5）（8c16g-200g）
-> - k8s-node3（rocky-9.5）（8c16g-200g）
+> - k8s-master（rocky-9.6）（4c8g-200g）
+> - k8s-node1（rocky-9.6）（8c16g-200g）
+> - k8s-node2（rocky-9.6）（8c16g-200g）
+> - k8s-node3（rocky-9.6）（8c16g-200g）
 
-### 0、环境准备（rocky-9.5 环境配置+调优）
+### 0、环境准备（rocky-9.6 环境配置+调优）
 
 ```shell
 # 颜色
@@ -25,7 +25,7 @@ echo "PS1='\[\033[35m\][\[\033[00m\]\[\033[31m\]\u\[\033[33m\]\[\033[33m\]@\[\03
 
 echo 'PS1="[\[\e[33m\]\u\[\e[0m\]\[\e[31m\]@\[\e[0m\]\[\e[35m\]\h\[\e[0m\]:\[\e[32m\]\w\[\e[0m\]] \[\e[33m\]\t\[\e[0m\] \[\e[31m\]Power\[\e[0m\]=\[\e[32m\]\!\[\e[0m\] \[\e[35m\]^0^\[\e[0m\]\n\[\e[95m\]公主请输命令^0^\[\e[0m\] \[\e[36m\]\\$\[\e[0m\] "' >> ~/.bashrc && source ~/.bashrc
 
-# 0、rocky-9.5 环境配置
+# 0、rocky-9.6 环境配置
 
 # 腾讯源
 sed -e 's|^mirrorlist=|#mirrorlist=|g' \
@@ -248,7 +248,7 @@ grep -vE "^\s*#" /etc/security/limits.conf
 ulimit -a
 ```
 
-### 1、安装containerd-1.7.27（官方源、腾讯源）(rocky-9.5 )
+### 1、安装containerd-1.7.27（官方源、腾讯源）(rocky-9.6 )
 
 ```shell
 # wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
@@ -359,7 +359,7 @@ debug: false
 EOF
 ```
 
-### 2、安装k8s（kubeadm-1.33.0、kubelet-1.33.0、kubectl-1.33.0）（官方源）(rocky-9.5 )
+### 2、安装k8s（kubeadm-1.33.1、kubelet-1.33.1、kubectl-1.33.1）（官方源）(rocky-9.6 )
 
 ```shell
 # 官方源
@@ -382,12 +382,12 @@ EOF
 
 yum makecache
 
-yum -y install kubeadm-1.33.0 kubelet-1.33.0 kubectl-1.33.0
+yum -y install kubeadm-1.33.1 kubelet-1.33.1 kubectl-1.33.1
 
 systemctl enable --now kubelet
 ```
 
-### 3、初始化 k8s-1.33.0 集群
+### 3、初始化 k8s-1.33.1 集群
 
 ```shell
 mkdir -p ~/kubeadm_init && cd ~/kubeadm_init
@@ -427,7 +427,7 @@ etcd:
     dataDir: /var/lib/etcd
 imageRepository: registry.aliyuncs.com/google_containers
 kind: ClusterConfiguration
-kubernetesVersion: v1.33.0
+kubernetesVersion: v1.33.1
 networking:
   dnsDomain: cluster.local
   podSubnet: 10.244.0.0/16
@@ -448,14 +448,14 @@ EOF
 # 查看所需镜像列表
 kubeadm config images list --config kubeadm-init.yaml
 
-kubeadm config images list --kubernetes-version=v1.33.0 --image-repository registry.aliyuncs.com/google_containers
+kubeadm config images list --kubernetes-version=v1.33.1 --image-repository registry.aliyuncs.com/google_containers
 ```
 
 ```shell
 # 预拉取镜像
 kubeadm config images pull --config kubeadm-init.yaml
 
-kubeadm config images pull --kubernetes-version=v1.33.0 --image-repository registry.aliyuncs.com/google_containers
+kubeadm config images pull --kubernetes-version=v1.33.1 --image-repository registry.aliyuncs.com/google_containers
 ```
 
 ```shell
@@ -474,22 +474,22 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
 查看calico与k8s的版本对应关系
 
-> https://docs.tigera.io/calico/3.29/getting-started/kubernetes/requirements
+> https://docs.tigera.io/calico/3.30/getting-started/kubernetes/requirements
 >
 > https://github.com/projectcalico/calico
 
-> 这里k8s-1.33.0，所以使用calico-v3.29.0版本（版本对应很关键）
+> 这里k8s-1.33.1，所以使用calico-v3.30.0版本（版本对应很关键）
 
 ```shell
 # mkdir -p ~/calico-yml
 
-# cd ~/calico-yml && wget https://github.com/projectcalico/calico/raw/v3.29.0/manifests/calico.yaml
+# cd ~/calico-yml && wget https://github.com/projectcalico/calico/raw/v3.30.0/manifests/calico.yaml
 ```
 
 ```shell
 mkdir -p ~/calico-yml
 
-cd ~/calico-yml && wget https://ghp.ci/https://github.com/projectcalico/calico/raw/v3.29.0/manifests/calico.yaml
+cd ~/calico-yml && wget https://gh-proxy.com/github.com/projectcalico/calico/raw/v3.30.0/manifests/calico.yaml
 ```
 
 ```shell
@@ -526,11 +526,11 @@ sed -i '/- name: IP_AUTODETECTION_METHOD/a \              value: "interface=eth0
 
 ```shell
 # 3 修改镜像仓库
-sed -i 's#docker.io/calico/cni:v3.29.0#ccr.ccs.tencentyun.com/huanghuanhui/calico:cni-v3.29.0#g' calico.yaml
+sed -i 's#docker.io/calico/cni:v3.30.0#ccr.ccs.tencentyun.com/huanghuanhui/calico:cni-v3.30.0#g' calico.yaml
 
-sed -i 's#docker.io/calico/node:v3.29.0#ccr.ccs.tencentyun.com/huanghuanhui/calico:node-v3.29.0#g' calico.yaml
+sed -i 's#docker.io/calico/node:v3.30.0#ccr.ccs.tencentyun.com/huanghuanhui/calico:node-v3.30.0#g' calico.yaml
 
-sed -i 's#docker.io/calico/kube-controllers:v3.29.0# ccr.ccs.tencentyun.com/huanghuanhui/calico:kube-controllers-v3.29.0#g' calico.yaml
+sed -i 's#docker.io/calico/kube-controllers:v3.30.0# ccr.ccs.tencentyun.com/huanghuanhui/calico:kube-controllers-v3.30.0#g' calico.yaml
 ```
 
 ```shell
