@@ -40,21 +40,11 @@ kubectl rollout restart daemonset kube-proxy -n kube-system
 **配置 MetalLB 为Layer2 模式**
 
 ```shell
-# kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.15.2/config/manifests/metallb-native.yaml
-
-# mkdir -p ~/MetalLB-yml && cd ~/MetalLB-yml
-
-# wget https://raw.githubusercontent.com/metallb/metallb/v0.15.2/config/manifests/metallb-native.yaml
-
-# kubectl apply -f ~/MetalLB-yml/metallb-native.yaml
-```
-
-```shell
-# kubectl apply -f https://gitee.com/kubelsp/upload/raw/master/metallb/v0.15.2/metallb-native.yaml
+# kubectl apply -f https://github.com/metallb/metallb/raw/refs/tags/v0.15.2/config/manifests/metallb-native.yaml
 
 mkdir -p ~/MetalLB-yml && cd ~/MetalLB-yml
 
-wget https://gitee.com/kubelsp/upload/raw/master/metallb/v0.15.2/metallb-native.yaml
+wget https://github.com/metallb/metallb/raw/refs/tags/v0.15.2/config/manifests/metallb-native.yaml
 
 sed -i 's#quay.io/metallb/controller:v0.15.2#ccr.ccs.tencentyun.com/huanghuanhui/metallb:controller-v0.15.2#g' metallb-native.yaml
 
