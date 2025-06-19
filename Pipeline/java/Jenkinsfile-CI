@@ -11,7 +11,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: jenkins-slave
-  namespace: jenkins-prod
+  namespace: jenkins
 spec:
   tolerations:
   - key: "no-pod"
@@ -68,10 +68,7 @@ spec:
     emptyDir: {}
   - name: maven-cache
     persistentVolumeClaim:
-      claimName: jenkins-prod-slave-maven-cache
-  - name: node-cache
-    persistentVolumeClaim:
-      claimName: jenkins-prod-slave-node-cache
+      claimName: jenkins-slave-maven-cache
 '''
         }
     }
@@ -83,17 +80,15 @@ GitBranch = "${GitBranch}"
 Server = "${Server}"
 RepoName = "${RepoName}"
 BaseImage = "${BaseImage}"
-JAVA_OPTS = "${JAVA_OPTS}"
 }
 
     parameters {
-        string(name: 'AppName', defaultValue: 'blue-ruoyi-auth', description: '服务名')
-        string(name: 'GitRepo', defaultValue: 'https://gitlab.huanghuanhui.com/root/RuoYi-Cloud.git', description: '代码仓库地址')
-        string(name: 'GitBranch', defaultValue: 'blue', description: '代码版本')
-        string(name: 'Server', defaultValue: 'ccr.ccs.tencentyun.com', description: '仓库地址')
-        string(name: 'RepoName', defaultValue: 'huanghuanhui/dev-blue-ruoyi-auth', description: '仓库名字（仓库自动创建）')
-        string(name: 'BaseImage', defaultValue: 'ccr.ccs.tencentyun.com/huanghuanhui/openjdk:8-jre', description: '基础镜像')
-        string(name: 'JAVA_OPTS', defaultValue: '-Xms1024M -Xmx1024M -Xmn256M -Dspring.config.location=app.yml -Dserver.tomcat.max-threads=800', description: 'jar 运行时的参数配置')
+        string(name: 'AppName', defaultValue: '', description: '服务名')
+        string(name: 'GitRepo', defaultValue: '', description: '代码仓库地址')
+        string(name: 'GitBranch', defaultValue: '', description: '代码版本')
+        string(name: 'Server', defaultValue: '', description: '仓库地址')
+        string(name: 'RepoName', defaultValue: '', description: '仓库名字（仓库自动创建）')
+        string(name: 'BaseImage', defaultValue: '', description: '基础镜像')
     }
     
     stages {
@@ -117,50 +112,10 @@ JAVA_OPTS = "${JAVA_OPTS}"
             steps {
               script {env.GIT_COMMIT_MSG = sh (script: 'git rev-parse --short HEAD', returnStdout: true).trim()}
               container('docker') {
-sh '''cat > entrypoint.sh << EOF
-#! /bash/bin -e
-env
-java $JAVA_OPTS -jar ./*.jar
-EOF
-
-cat > app.yml << EOF
-# Tomcat
-server:
-  port: 9200
-
-# Spring
-spring:
-  application:
-    # 应用名称
-    name: ${AppName}
-  profiles:
-    # 环境配置
-    active: dev
-  cloud:
-    nacos:
-      discovery:
-        # 服务注册地址
-        server-addr: nacos-headless.nacos.svc.cluster.local:8848
-        namespace: blue-prod
-      config:
-        # 配置中心地址
-        server-addr: nacos-headless.nacos.svc.cluster.local:8848
-        namespace: blue-prod
-        # 配置文件格式
-        file-extension: yml
-        # 共享配置
-        shared-configs:
-          - application
-EOF
-
-
-cat > Dockerfile << EOF
+sh '''cat > Dockerfile << EOF
 FROM ${BaseImage}
 WORKDIR /usr/local/src/
-ADD ./ruoyi-auth/target/ruoyi-auth.jar /usr/local/src/ruoyi-auth.jar
-ADD app.yml .
-ADD entrypoint.sh .
-ENTRYPOINT ["sh","./entrypoint.sh"]
+ADD ./${AppName}/target/${AppName}.jar /usr/local/src/${AppName}.jar
 EOF
 
 docker build -t ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID} .
