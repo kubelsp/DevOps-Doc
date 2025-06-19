@@ -53,3 +53,15 @@ source ~/.istioctl.bash
 istioctl uninstall --purge
 ```
 
+`````shell
+istioctl install -y \
+    --set profile=default \  # 使用默认安装配置（适合生产环境）
+    --set components.egressGateways[0].name=istio-egressgateway \  # 启用 Egress Gateway
+    --set values.global.mtls.auto=true \  # 全局自动启用 mTLS
+    --set values.gateways.istio-ingressgateway.type=LoadBalancer  # Ingress Gateway 使用 LoadBalancer 类型
+`````
+
+```shell
+istioctl install --set profile=demo --set values.gateways.istio-ingressgateway.type=NodePort
+```
+
