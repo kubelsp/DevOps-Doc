@@ -10,7 +10,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: jenkins-slave
-  namespace: jenkins-prod
+  namespace: jenkins
 spec:
   tolerations:
   - key: k8s-jenkins
@@ -34,6 +34,10 @@ spec:
     - sleep
     args:
     - 99d
+  - name: jnlp
+    #image: jenkins/inbound-agent:3206.vb_15dcf73f6a_9-2
+    image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins-inbound-agent:3206.vb_15dcf73f6a_9-2
+    imagePullPolicy: IfNotPresent
 '''
         }
     }
@@ -43,6 +47,12 @@ AppName = "${AppName}"
 Server = "${Server}"
 RepoName = "${RepoName}"
 }
+
+    parameters {
+        string(name: 'AppName', defaultValue: '', description: '服务名')
+        string(name: 'Server', defaultValue: '', description: '仓库地址')
+        string(name: 'RepoName', defaultValue: '', description: '仓库名字（仓库自动创建）')
+    }
 
     stages {
         stage('获取镜像仓库中最新的版本') {
@@ -116,6 +126,52 @@ echo ${Image} > image.sh
                 """
                    }
                 }
+            }
+        }
+    }
+}
+
+post {
+        success {
+            script {
+                def message = """
+                    {
+                        "msgtype": "markdown",
+                        "markdown": {
+                            "content": "「stupid」发布系统通知
+                            > 当前状态: <font color=\\\"warning\\\">构建成功</font>
+                            > 提交信息: <font color=\\\"warning\\\">${COMMIT_INFO}</font>
+                            > 提交人员: ${COMMIT_USER}
+                            > 发布应用: <font color=\\\"warning\\\">${APPLICATION_NAME}</font>
+                            > 提交时间: <font color=\\\"comment\\\">${COMMIT_TIME}</font>
+                            > 当前版本: <font color=\\\"comment\\\">dev</font>
+                        }
+                    }
+                """
+                sh """
+                    curl -s -d '${message}' -H 'Content-Type: application/json' -i -XPOST ${QYWX_URL}
+                """
+            }
+        }
+        failure {
+            script {
+                def message = """
+                    {
+                        "msgtype": "markdown",
+                        "markdown": {
+                            "content": "「stupid」发布系统通知
+                            > 当前状态: <font color=\\\"warning\\\">构建失败</font>
+                            > 提交信息: <font color=\\\"warning\\\">${COMMIT_INFO}</font>
+                            > 提交人员: ${COMMIT_USER}
+                            > 发布应用: <font color=\\\"warning\\\">${APPLICATION_NAME}</font>
+                            > 提交时间: <font color=\\\"comment\\\">${COMMIT_TIME}</font>
+                            > 当前版本: <font color=\\\"comment\\\">${params.GIT_BRANCH}</font>
+                        }
+                    }
+                """
+                sh """
+                    curl -s -d '${message}' -H 'Content-Type: application/json' -i -XPOST https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=227da3b0-60e7-4b30-97fe-ed79a3268f31
+                """
             }
         }
     }
