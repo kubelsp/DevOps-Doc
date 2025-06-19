@@ -93,10 +93,10 @@ BaseImage = "${BaseImage}"
     
     stages {
         stage('拉取代码') {
-			steps {
-			git branch: "${GitBranch}", credentialsId: "${git_auth}", url: "${GitRepo}"
-			}
-		}
+            steps {
+            git branch: "${GitBranch}", credentialsId: "${git_auth}", url: "${GitRepo}"
+            }
+        }
 
         stage('代码编译') {
             steps {
@@ -112,7 +112,8 @@ BaseImage = "${BaseImage}"
             steps {
               script {env.GIT_COMMIT_MSG = sh (script: 'git rev-parse --short HEAD', returnStdout: true).trim()}
               container('docker') {
-sh '''cat > Dockerfile << EOF
+sh '''
+cat > Dockerfile << EOF
 FROM ${BaseImage}
 WORKDIR /usr/local/src/
 ADD ./${AppName}/target/${AppName}.jar /usr/local/src/${AppName}.jar
