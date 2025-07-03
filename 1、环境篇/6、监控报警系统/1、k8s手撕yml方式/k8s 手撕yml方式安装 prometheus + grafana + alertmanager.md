@@ -2473,6 +2473,84 @@ EOF
 kubectl apply -f ~/prometheus-yml/alertmanager-webhook-dingtalk-Deployment.yml
 ```
 
+企业微信添加多个机器人
+
+````shell
+cat > alertmanager-webhook-WeCom-ConfigMap.yml << 'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml: |-
+    global:
+      resolve_timeout: 5m
+    route:
+      receiver: webhook
+      group_wait: 10s
+      group_interval: 2m
+      repeat_interval: 1h
+      group_by: [alertname]
+    receivers:
+    - name: webhook
+      webhook_configs:
+      - url: 'http://alertmanager-webhook-wecom.monitoring.svc.cluster.local:8060/adapter/wx'
+        send_resolved: true
+      - url: 'http://alertmanager-webhook-wecom-2.monitoring.svc.cluster.local:8060/adapter/wx'
+        send_resolved: true
+EOF
+````
+
+```shell
+cat > alertmanager-webhook-WeCom-Deployment.yml << 'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: alertmanager-webhook-wecom-2
+  name: alertmanager-webhook-wecom-2
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: alertmanager-webhook-wecom-2
+  template:
+    metadata:
+      labels:
+        app: alertmanager-webhook-wecom-2
+    spec:
+      containers:
+      - args:
+        - --adapter=/app/prometheusalert/wx.js=/adapter/wx=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx
+        image: ccr.ccs.tencentyun.com/huanghuanhui/prometheus-webhook:2025  
+        name: alertmanager-webhook-wecom-2
+        ports:
+        - containerPort: 80
+          protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: alertmanager-webhook-wecom-2
+  name: alertmanager-webhook-wecom-2
+  namespace: monitoring
+spec:
+  ports:
+  - port: 8060
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: alertmanager-webhook-wecom-2
+  type: ClusterIP
+EOF
+```
+
+
+
+
+
 `yml 截图`
 
 ![](https://md.huanghuanhui.com/2023-11-27-prometheus.png)
