@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: mongodb
+spec:
+  replicas: 1
+  serviceName: mongodb-headless
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      nodeSelector:
+        middleware: middleware
+      tolerations:
+      - effect: NoSchedule
+        key: middleware
+        operator: Equal
+        value: middleware
+      containers:
+      - name: mongodb
+        image: mongo:6.0.24
+        imagePullPolicy: IfNotPresent
+        command: ["mongod", "--bind_ip_all", "--auth"]
+        securityContext:
+          runAsUser: 0
+        env:
+          - name: MONGO_INITDB_ROOT_USERNAME
+            value: root
+          - name: MONGO_INITDB_ROOT_PASSWORD
+            value: 'x5auKP8o3IYXYkpd'
+        ports:
+          - containerPort: 27017
+        volumeMounts:
+          - name: mongo-data
+            mountPath: /data/db
+          - mountPath: /etc/localtime
+            name: localtime
+      volumes:
+        - name: mongo-data
+          persistentVolumeClaim:
+            claimName: mongodb-pvc
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+  volumeClaimTemplates:
+  - metadata:
+      name: mongo-data
+    spec:
+      storageClassName: efs-sc
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 2Ti
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-headless
+  namespace: mongodb
+  labels:
+    app: mongodb
+spec:
+  clusterIP: None
+  ports:
+    - port: 27017
+      name: mongodb
+      targetPort: 27017
+  selector:
+    app: mongodb
+    
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+  namespace: mongodb
+spec:
+  type: NodePort
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+      protocol: TCP
+      nodePort: 30017
+  selector:
+    app: mongodb

@@ -1,0 +1,17 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: efs-sc
+parameters:
+  basePath: /efs
+  directoryPerms: "777"
+  ensureUniqueDirectory: "true"
+  fileSystemId: fs-07fe2e71bf38c006c
+  gidRangeEnd: "2000"
+  gidRangeStart: "1000"
+  provisioningMode: efs-ap
+  reuseAccessPoint: "false"
+  subPathPattern: ${.PVC.namespace}/${.PVC.name}
+provisioner: efs.csi.aws.com
+reclaimPolicy: Retain
+volumeBindingMode: Immediate

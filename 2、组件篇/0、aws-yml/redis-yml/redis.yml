@@ -1,0 +1,110 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: redis-cm
+  namespace: redis
+  labels:
+    app: redis
+data:
+  redis.conf: |-
+    dir /data
+    port 6379
+    bind 0.0.0.0
+    appendonly yes
+    protected-mode no
+    requirepass jWoWUnWkMTUEG4qW
+    pidfile /data/redis-6379.pid 
+    save 900 1
+    save 300 10
+    save 60 10000
+    appendfsync always
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: redis
+spec:
+  replicas: 1
+  serviceName: redis
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      name: redis
+      labels:
+        app: redis
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: redis
+              topologyKey: kubernetes.io/hostname
+      nodeSelector:
+        middleware: middleware
+      tolerations:
+      - effect: NoSchedule
+        key: middleware
+        operator: Equal
+        value: middleware
+      containers:
+      - name: redis
+        #image: redis:7.2.4-alpine
+        image: redis:6.0.0-alpine
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: TZ
+          value: Asia/Shanghai
+        command:
+          - "sh"
+          - "-c"
+          - "redis-server /etc/redis/redis.conf"
+        ports:
+        - containerPort: 6379
+          name: tcp-redis
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "4"
+            memory: "16Gi"
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+        volumeMounts:
+          - name: redis-data
+            mountPath: /data
+          - name: config
+            mountPath: /etc/redis/redis.conf
+            subPath: redis.conf
+      volumes:
+        - name: config
+          configMap:
+            name: redis-cm
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-data
+    spec:
+      storageClassName: "efs-sc"
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 2Ti
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: redis
+spec:
+  type: NodePort
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
+      nodePort: 30078
+  selector:
+    app: redis

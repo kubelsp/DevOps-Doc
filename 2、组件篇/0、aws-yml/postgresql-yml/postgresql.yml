@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: postgres
+spec:
+  replicas: 1
+  serviceName: postgres-headless
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      nodeSelector:
+        middleware: middleware
+      tolerations:
+      - effect: NoSchedule
+        key: middleware
+        operator: Equal
+        value: middleware
+      containers:
+      - name: postgres
+        image: postgres:10.0
+        imagePullPolicy: IfNotPresent
+        command:
+        - bash
+        - -c
+        - |
+          usermod -u $(stat -c '%u' /var/lib/postgresql/data) postgres && \
+          groupmod -g $(stat -c '%u' /var/lib/postgresql/data) postgres && \
+          chown -R postgres:postgres /var/lib/postgresql && \
+          /usr/local/bin/docker-entrypoint.sh postgres
+        env:
+        - name: TZ
+          value: Asia/Shanghai
+        - name: POSTGRES_PASSWORD
+          value: tAgeawMbGa18IMnP
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_DB
+          value: test
+        - name: POSTGRES_EXTENSION
+          value: 'pg_trgm,btree_gist'
+        ports:
+        - containerPort: 5432
+          name: tcp-postgres
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 0.5
+            memory: 1Gi
+          limits:
+            cpu: 4
+            memory: 8Gi
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      storageClassName: efs-sc
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 2Ti
+          
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-headless
+  namespace: postgres
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: postgres
+    port: 5432
+    protocol: TCP
+    targetPort: tcp-postgres
+  selector:
+    app: postgres
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: postgres
+  labels:
+    app: postgres
+spec:
+  type: NodePort
+  ports:
+  - name: postgres
+    port: 5432
+    protocol: TCP
+    targetPort: tcp-postgres
+    nodePort: 30007
+  selector:
+    app: postgres

@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: mysql
+spec:
+  serviceName: mysql-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      nodeSelector:
+        middleware: middleware
+      tolerations:
+      - effect: NoSchedule
+        key: middleware
+        operator: Equal
+        value: middleware
+      containers:
+      - name: mysql
+        image: mysql:8.0.28
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: mysql
+          containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "la6NByJIYN1zEUON"
+        resources:
+          limits:
+            cpu: 8
+            memory: 32Gi
+          requests:
+            cpu: 1
+            memory: 4Gi
+        livenessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+          initialDelaySeconds: 5
+          periodSeconds: 2
+          timeoutSeconds: 1
+        volumeMounts:
+        - name: mysql-pvc
+          mountPath: /var/lib/mysql
+        - name: mysql-config
+          mountPath: /etc/mysql/my.cnf
+          subPath: my.cnf
+        - mountPath: /etc/localtime
+          name: localtime
+        securityContext:
+          runAsGroup: 1000
+          runAsUser: 1000
+      volumes:
+      - name: mysql-config
+        configMap:
+          name: mysql-config
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-pvc
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: efs-sc
+      resources:
+        requests:
+          storage: 2Ti
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-headless
+  namespace: mysql
+  labels:
+    app: mysql
+spec:
+  clusterIP: None
+  ports:
+  - port: 3306
+    name: mysql
+    targetPort: 3306
+  selector:
+    app: mysql
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: mysql
+  labels:
+    app: mysql
+spec:
+  type: NodePort
+  ports:
+  - port: 3306
+    targetPort: 3306
+    nodePort: 30336
+  selector:
+    app: mysql
