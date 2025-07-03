@@ -1,7 +1,5 @@
 ### k8s部署存算一体 Doris 集群
 
-> [GitHub - apache/doris-operator: Doris kubernetes operator](https://github.com/apache/doris-operator)
->
 > https://github.com/apache/doris-operator
 >
 > k8s版本：v1.33.2
