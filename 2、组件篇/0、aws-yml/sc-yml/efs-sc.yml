@@ -6,7 +6,7 @@ parameters:
   basePath: /efs
   directoryPerms: "777"
   ensureUniqueDirectory: "true"
-  fileSystemId: fs-07fe2e71bf38c006c
+  fileSystemId: fs-xxxxxxxxxxxxxx
   gidRangeEnd: "2000"
   gidRangeStart: "1000"
   provisioningMode: efs-ap
