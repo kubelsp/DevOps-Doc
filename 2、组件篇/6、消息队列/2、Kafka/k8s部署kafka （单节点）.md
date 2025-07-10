@@ -18,11 +18,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: kafka
+      app: kafka
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: kafka
+        app: kafka
     spec:
       securityContext:
         fsGroup: 1001
