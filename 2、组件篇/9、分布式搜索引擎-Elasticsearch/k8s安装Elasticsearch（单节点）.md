@@ -57,11 +57,15 @@ spec:
             cpu: 1
             memory: 2Gi
         volumeMounts:
-        - name: elasticsearch-data
+        - name: elasticsearch-pvc
           mountPath: /usr/share/elasticsearch/data
+          subPath: data
+        - name: elasticsearch-pvc
+          mountPath: /usr/share/elasticsearch/plugins
+          subPath: plugins
   volumeClaimTemplates:
   - metadata:
-      name: elasticsearch-data
+      name: elasticsearch-pvc
     spec:
       accessModes: ["ReadWriteOnce"]
       storageClassName: nfs-storage
