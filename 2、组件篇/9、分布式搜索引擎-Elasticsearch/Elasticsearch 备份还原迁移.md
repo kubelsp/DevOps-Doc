@@ -72,6 +72,40 @@ PUT _snapshot/minio_repo
 }
 ```
 
+`````shell
+bin/elasticsearch-keystore add s3.client.default.access_key
+
+bin/elasticsearch-keystore add s3.client.default.secret_key
+
+bin/elasticsearch-keystore list
+`````
+
+```shell
+POST _nodes/reload_secure_settings
+{
+  "secure_settings_password": ""
+}
+```
+
+````shell
+PUT _snapshot/minio_repo
+{
+  "type": "s3",
+  "settings": {
+    "bucket": "elastic-backups",
+    "endpoint": "http://10.1.14.17:30090",
+    "protocol": "http",
+    "path_style_access": true,
+    "compress": true,
+    "chunk_size": "100mb"
+  }
+}
+````
+
+```shell
+GET /_snapshot/minio_repo
+```
+
 存储参数对照表
 
 |         参数名称          |  S3推荐值   | MinIO推荐值 |     作用说明     |
@@ -90,6 +124,62 @@ PUT _snapshot/minio_repo
 |   日常备份   |  每天  |   30天   |  企业SSD   |     P1     |
 |   周度归档   |  每周  |   1年    | S3标准存储 |     P2     |
 |   月度冷备   |  每月  |   5年    | S3 Glacier |     P3     |
+
+4、创建快照
+
+````shell
+# 异步，任务后台执行
+PUT  _snapshot/minio_repo/snapshot_all_2025_08_08
+{
+    "indices": "*,-.*,-ilm-*"
+}
+
+# 同步，等待完成
+PUT  _snapshot/minio_repo/snapshot_all_2025_08_08?wait_for_completion=true
+{
+    "indices": "*,-.*,-ilm-*"
+}
+````
+
+| indices 值 |                          含义                          |
+| :--------: | :----------------------------------------------------: |
+|     *      |                        所有索引                        |
+|    -.*     |        排除所有以 . 开头的索引，例如，系统索引         |
+|   -ilm-*   | 排除所有以 ilm- 开头的索引，例如，索引生命周期系统索引 |
+
+5、查看快照备份进度
+
+````shell
+GET _snapshot/minio_repo/snapshot_all_2025_08_08
+
+GET _snapshot/minio_repo/snapshot_all_2025_08_08?filter_path=snapshots.state
+````
+
+6、增量备份/恢复
+
+#### 增量备份
+
+增量备份就是在原有的快照仓库里，新建一个快照
+
+第一次备份快照
+
+````shell
+PUT  _snapshot/minio_repo/snapshot_all_2025_08_08
+{
+    "indices": "*,-.*,-ilm-*"
+}
+````
+
+第二次备份快照
+
+```shell
+PUT  _snapshot/minio_repo/snapshot_all_2025_08_09
+{
+    "indices": "*,-.*,-ilm-*"
+}
+```
+
+> 第二次备份就是基于第一次全量的增量备份
 
 自动化备份配置
 
