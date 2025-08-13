@@ -127,7 +127,7 @@ kubectl -n elastic-system create secret generic snapshot-settings \
 `````
 
 ````shell
-# 如果ksk变了，重载配置，不需要重启es
+# 如果aksk变了，重载配置，不需要重启es
 
 POST _nodes/reload_secure_settings
 {
