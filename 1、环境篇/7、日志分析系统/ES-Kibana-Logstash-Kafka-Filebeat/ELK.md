@@ -118,6 +118,8 @@ kubectl apply -f ~/elk-yml/es.yml
 
 S3存储库配置
 
+https://www.elastic.co/docs/deploy-manage/tools/snapshot-and-restore/cloud-on-k8s#k8s-s3-compatible
+
 ````shell
 kubectl -n elastic-system create secret generic snapshot-settings \
    --from-literal=s3.client.default.access_key=$YOUR_ACCESS_KEY \
