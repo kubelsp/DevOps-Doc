@@ -124,6 +124,15 @@ kubectl -n elastic-system create secret generic snapshot-settings \
    --from-literal=s3.client.default.secret_key=$YOUR_SECRET_ACCESS_KEY
 ````
 
+```shell
+# 如果ksk变了，重载配置，不需要重启es
+
+POST _nodes/reload_secure_settings
+{
+  "secure_settings_password": ""
+}
+```
+
 ````shell
 cat > ~/elk-yml/es.yml << 'EOF'
 apiVersion: elasticsearch.k8s.elastic.co/v1

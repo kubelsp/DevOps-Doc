@@ -1,4 +1,4 @@
-### 17、ELK
+### ELK
 
 ###### (Elastic Cloud on Kubernetes)（ECK）
 
@@ -117,6 +117,75 @@ EOF
 ````shell
 kubectl apply -f ~/elk-yml/es.yml
 ````
+
+S3存储库配置
+
+`````shell
+kubectl -n elastic-system create secret generic snapshot-settings \
+   --from-literal=s3.client.default.access_key=$YOUR_ACCESS_KEY \
+   --from-literal=s3.client.default.secret_key=$YOUR_SECRET_ACCESS_KEY
+`````
+
+````shell
+# 如果ksk变了，重载配置，不需要重启es
+
+POST _nodes/reload_secure_settings
+{
+  "secure_settings_password": ""
+}
+````
+
+````shell
+cat > ~/elk-yml/es.yml << 'EOF'
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearch
+  namespace: elastic-system
+spec:
+  version: 8.13.3
+  secureSettings:
+  - secretName: snapshot-settings
+  http:
+    tls:
+      selfSignedCertificate:  
+        ## 取消默认的tls
+        disabled: true
+  nodeSets:
+  - name: master-nodes
+    count: 3
+    config:
+      node.roles: ["master", "remote_cluster_client"]
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Ti
+        storageClassName: nfs-storage
+  - name: data-nodes
+    count: 3
+    config:
+      node.roles: ["master", "data", "ingest", "remote_cluster_client"]
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Ti
+        storageClassName: nfs-storage
+EOF
+````
+
+```shell
+kubectl apply -f ~/elk-yml/es.yml
+```
 
 验证
 
