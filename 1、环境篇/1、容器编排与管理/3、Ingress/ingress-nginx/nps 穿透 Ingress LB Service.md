@@ -1,10 +1,6 @@
-###### nps 穿透 Ingress LB Service
-
-
+### nps 穿透 Ingress LB Service
 
 ###### 目的：k8s内网穿透（本地k8s集群通过ingress暴露的域名可以公网访问，并且免费自动申请证书）
-
-
 
 假设：
 
