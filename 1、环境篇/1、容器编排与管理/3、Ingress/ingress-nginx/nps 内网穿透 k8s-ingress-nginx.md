@@ -160,6 +160,10 @@ chmod +x nps.conf
 docker run -d --name nps --restart=always --net=host -v /root/nps/conf:/conf ccr.ccs.tencentyun.com/huanghuanhui/nps:v0.26.10
 ````
 
+> 访问地址：ip + 9999
+>
+> 用户密码：admin、Admin@2025
+
 ###### 2、本地 K8s 部署 npc 客户端 Pod
 
 直接在本地内网k8s集群跑 npc 客户端，让它连公网 nps 服务器：
