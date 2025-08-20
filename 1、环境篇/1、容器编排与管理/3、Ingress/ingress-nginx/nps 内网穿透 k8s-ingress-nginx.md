@@ -32,7 +32,7 @@ default   true          false             ["192.168.1.100-192.168.1.172"]
 ````shell
 svc
 NAME                                 TYPE           CLUSTER-IP       EXTERNAL-IP                                                                   PORT(S)                      AGE
-ingress-nginx-controller             LoadBalancer   172.20.9.148     a50d35708d72044c6b3b9ec12ad1a521-898761133.ap-southeast-1.elb.amazonaws.com   80:32052/TCP,443:30087/TCP   62d
+ingress-nginx-controller             LoadBalancer   172.20.9.148     192.168.1.100   80:32052/TCP,443:30087/TCP   62d
 ingress-nginx-controller-admission   ClusterIP      172.20.246.218   <none>                                                                        443/TCP                      62d
 ingress-nginx-controller-metrics     ClusterIP      172.20.44.10     <none>                                                                        10254/TCP                    62d
 ingress-nginx-defaultbackend         ClusterIP      172.20.156.53    <none>                                                                        80/TCP                       62d
