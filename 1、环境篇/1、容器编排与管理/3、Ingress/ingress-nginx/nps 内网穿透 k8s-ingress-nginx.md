@@ -153,7 +153,9 @@ chmod +x nps.conf
 ````
 
 ````shell
-docker run -d --name nps --restart=always --net=host -v /root/nps/conf:/conf ffdfgdfg/nps
+# ffdfgdfg/nps:v0.26.10
+
+docker run -d --name nps --restart=always --net=host -v /root/nps/conf:/conf ccr.ccs.tencentyun.com/huanghuanhui/nps:v0.26.10
 ````
 
 ###### 2、本地 K8s 部署 npc 客户端 Pod
@@ -217,7 +219,7 @@ spec:
     spec:
       containers:
       - name: npc
-        #image: ffdfgdfg/npc:latest
+        #image: ffdfgdfg/npc:v0.26.10
         image: ccr.ccs.tencentyun.com/huanghuanhui/npc:v0.26.10
         volumeMounts:
         - name: npc-config
