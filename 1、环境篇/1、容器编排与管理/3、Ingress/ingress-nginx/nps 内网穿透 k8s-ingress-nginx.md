@@ -32,10 +32,10 @@ default   true          false             ["192.168.1.100-192.168.1.172"]
 ````shell
 svc
 NAME                                 TYPE           CLUSTER-IP       EXTERNAL-IP                                                                   PORT(S)                      AGE
-ingress-nginx-controller             LoadBalancer   172.20.9.148     192.168.1.100   80:32052/TCP,443:30087/TCP   62d
-ingress-nginx-controller-admission   ClusterIP      172.20.246.218   <none>                                                                        443/TCP                      62d
-ingress-nginx-controller-metrics     ClusterIP      172.20.44.10     <none>                                                                        10254/TCP                    62d
-ingress-nginx-defaultbackend         ClusterIP      172.20.156.53    <none>                                                                        80/TCP                       62d
+ingress-nginx-controller             LoadBalancer   172.20.9.148     192.168.1.100   80:32052/TCP,443:30087/TCP   8m27s
+ingress-nginx-controller-admission   ClusterIP      172.20.246.218   <none>                                                                        443/TCP                      3m27s
+ingress-nginx-controller-metrics     ClusterIP      172.20.44.10     <none>                                                                        10254/TCP                    3m27s
+ingress-nginx-defaultbackend         ClusterIP      172.20.156.53    <none>                                                                        80/TCP                       3m27s
 ````
 
 3、cert-manager的pod
@@ -43,9 +43,9 @@ ingress-nginx-defaultbackend         ClusterIP      172.20.156.53    <none>     
 ````shell
 po
 NAME                                       READY   STATUS    RESTARTS   AGE
-cert-manager-84f7d8bf7b-jcnm2              1/1     Running   0          44d
-cert-manager-cainjector-868789bf8f-gfddm   1/1     Running   0          44d
-cert-manager-webhook-56f8b8f596-8wlq5      1/1     Running   0          44d
+cert-manager-84f7d8bf7b-jcnm2              1/1     Running   0          8m27s
+cert-manager-cainjector-868789bf8f-gfddm   1/1     Running   0          8m27s
+cert-manager-webhook-56f8b8f596-8wlq5      1/1     Running   0          8m27s
 ````
 
 
