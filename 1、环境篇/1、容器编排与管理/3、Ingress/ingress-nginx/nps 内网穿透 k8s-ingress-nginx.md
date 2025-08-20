@@ -1,4 +1,4 @@
-### nps 穿透 Ingress LB Service
+### nps  内网穿透 k8s-ingress-nginx
 
 ###### 目的：k8s内网穿透（本地k8s集群通过ingress暴露的域名可以公网访问，并且免费自动申请证书）
 
@@ -243,10 +243,12 @@ EOF
 
 ###### 实现的效果：本地k8s集群通过ingress暴露的域名可以公网访问，并且免费自动申请证书
 
-1. 外部 CA 访问 https://ingress.openhhh.com
-2. 请求到达公网 nps
-3. nps 通过内网穿透连接到你本地 K8s
-4. 请求被转发到 Ingress Controller LB Service
-5. cert-manager 的 HTTP-01 验证 Pod 返回 token
-6. CA 校验通过 → 签发证书
+1. 域名ingress.openhhh.com 解析公网ip 193.112.118.79 
+2. 外部 CA 访问 https://ingress.openhhh.com
+3. 请求到达公网 nps
+4. nps 通过内网穿透连接到你本地 K8s
+5. 请求被转发到 Ingress Controller LB Service
+6. cert-manager 的 HTTP-01 验证 Pod 返回 token
+7. CA 校验通过 → 签发证书
+8. ingress.openhhh.com能暴露公网访问、并且免费自动证书
 
