@@ -507,7 +507,7 @@ cgroupDriver: systemd
 EOF
 ````
 
-Cilium-Overlay 模式
+Cilium-Overlay 模式：将 Kubernetes 从 kube-proxy 和 IPtables 中解放出来
 
 ````shell
 mkdir -p ~/kubeadm_init && cd ~/kubeadm_init
@@ -662,6 +662,8 @@ kubectl apply -f ~/calico-yml/calico.yaml
 ```
 
 ### 5、安装 k8s 集群网络（cilium）
+
+https://cilium.io/use-cases/kube-proxy/
 
 > 在 L3 网络下，Cilium 的推荐安装模式：Cilium-Overlay
 >
