@@ -13,7 +13,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: jenkins-slave
-  namespace: jenkins-prod
+  namespace: jenkins
 spec:
   tolerations:
   - key: k8s-jenkins
@@ -22,8 +22,8 @@ spec:
     effect: NoSchedule
   containers:
   - name: docker
-    #image: docker:24.0.6
-    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:24.0.6
+    #image: docker:28.1.1
+    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:28.1.1
     imagePullPolicy: IfNotPresent
     readinessProbe:
       exec:
@@ -36,22 +36,25 @@ spec:
     - name: docker-socket
       mountPath: /var/run
   - name: docker-daemon
-    #image: docker:24.0.6-dind
-    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:24.0.6-dind
+    #image: docker:28.1.1-dind
+    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:28.1.1-dind
     imagePullPolicy: IfNotPresent
     securityContext:
       privileged: true
     volumeMounts:
     - name: docker-socket
       mountPath: /var/run
-  - name: golang
-    #image: golang:1.21.3
-    image: ccr.ccs.tencentyun.com/huanghuanhui/golang:1.21.3
+  - name: maven
+    #image: maven:3.8.1-jdk-8
+    image: ccr.ccs.tencentyun.com/huanghuanhui/maven:3.8.1-jdk-8
     imagePullPolicy: IfNotPresent
     command:
     - sleep
     args:
     - 99d
+    volumeMounts:
+    - name: maven-cache
+      mountPath: /root/.m2/repository
   - name: kubectl
     #image: kostiscodefresh/kubectl-argo-rollouts:v1.6.0
     image: ccr.ccs.tencentyun.com/huanghuanhui/kubectl:v1.6.0
@@ -60,9 +63,16 @@ spec:
     - sleep
     args:
     - 99d
+  - name: jnlp
+    #image: jenkins/inbound-agent:3206.vb_15dcf73f6a_9-2
+    image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins-inbound-agent:3206.vb_15dcf73f6a_9-2
+    imagePullPolicy: IfNotPresent
   volumes:
   - name: docker-socket
     emptyDir: {}
+  - name: maven-cache
+    persistentVolumeClaim:
+      claimName: jenkins-slave-maven-cache
 '''
         }
     }
@@ -74,8 +84,19 @@ GitBranch = "${GitBranch}"
 Server = "${Server}"
 RepoName = "${RepoName}"
 BaseImage = "${BaseImage}"
+JAVA_OPTS = "${JAVA_OPTS}"
 }
 
+    parameters {
+        string(name: 'AppName', defaultValue: 'blue-ruoyi-auth', description: '服务名')
+        string(name: 'GitRepo', defaultValue: 'https://gitlab.huanghuanhui.com/root/RuoYi-Cloud.git', description: '代码仓库地址')
+        string(name: 'GitBranch', defaultValue: 'blue', description: '代码版本')
+        string(name: 'Server', defaultValue: 'ccr.ccs.tencentyun.com', description: '仓库地址')
+        string(name: 'RepoName', defaultValue: 'huanghuanhui/dev-blue-ruoyi-auth', description: '仓库名字（仓库自动创建）')
+        string(name: 'BaseImage', defaultValue: 'ccr.ccs.tencentyun.com/huanghuanhui/openjdk:8-jre', description: '基础镜像')
+        string(name: 'JAVA_OPTS', defaultValue: '-Xms2048M -Xmx2048M -Xmn256M -Dspring.config.location=app.yml -Dserver.tomcat.max-threads=800', description: 'jar 运行时的参数配置')
+    }
+    
     stages {
         stage('拉取代码') {
             steps {
@@ -85,9 +106,9 @@ BaseImage = "${BaseImage}"
 
         stage('代码编译') {
             steps {
-              container('golang') {
+              container('golanmaveng') {
                 sh """
-                 ls -l
+                  mvn -U clean install -Dmaven.test.skip=true
                    """
                 }
             }
@@ -97,13 +118,53 @@ BaseImage = "${BaseImage}"
             steps {
               script {env.GIT_COMMIT_MSG = sh (script: 'git rev-parse --short HEAD', returnStdout: true).trim()}
               container('docker') {
-sh '''
+sh '''cat > entrypoint.sh << EOF
+#! /bash/bin -e
+env
+java $JAVA_OPTS -jar ./*.jar
+EOF
+
+cat > app.yml << EOF
+# Tomcat
+server:
+  port: 9200
+
+# Spring
+spring:
+  application:
+    # 应用名称
+    name: ${AppName}
+  profiles:
+    # 环境配置
+    active: dev
+  cloud:
+    nacos:
+      discovery:
+        # 服务注册地址
+        server-addr: nacos-headless.nacos.svc.cluster.local:8848
+        namespace: blue-prod
+      config:
+        # 配置中心地址
+        server-addr: nacos-headless.nacos.svc.cluster.local:8848
+        namespace: blue-prod
+        # 配置文件格式
+        file-extension: yml
+        # 共享配置
+        shared-configs:
+          - application
+EOF
+
+
 cat > Dockerfile << EOF
 FROM ${BaseImage}
-WORKDIR /usr/share/nginx/html
-ADD ./* /usr/share/nginx/html
+WORKDIR /usr/local/src/
+ADD ./ruoyi-auth/target/ruoyi-auth.jar /usr/local/src/ruoyi-auth.jar
+ADD app.yml .
+ADD entrypoint.sh .
+ENTRYPOINT ["sh","./entrypoint.sh"]
 EOF
-docker build -t ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID} . && docker images
+
+docker build -t ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID} .
 '''
                 }
             }

@@ -10,7 +10,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: jenkins-slave
-  namespace: jenkins-prod
+  namespace: jenkins
 spec:
   tolerations:
   - key: k8s-jenkins
@@ -34,6 +34,10 @@ spec:
     - sleep
     args:
     - 99d
+  - name: jnlp
+    #image: jenkins/inbound-agent:3206.vb_15dcf73f6a_9-2
+    image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins-inbound-agent:3206.vb_15dcf73f6a_9-2
+    imagePullPolicy: IfNotPresent
 '''
         }
     }
