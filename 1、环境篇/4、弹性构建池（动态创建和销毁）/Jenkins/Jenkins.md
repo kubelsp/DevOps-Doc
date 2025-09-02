@@ -447,6 +447,10 @@ spec:
     - sleep
     args:
     - 99d
+  - name: jnlp
+    #image: jenkins/inbound-agent:3327.v868139a_d00e0-6
+    image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins-inbound-agent:3327.v868139a_d00e0-6
+    imagePullPolicy: IfNotPresent
   volumes:
   - name: docker-socket
     emptyDir: {}

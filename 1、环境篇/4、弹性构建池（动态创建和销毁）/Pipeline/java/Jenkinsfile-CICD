@@ -64,8 +64,8 @@ spec:
     args:
     - 99d
   - name: jnlp
-    #image: jenkins/inbound-agent:3206.vb_15dcf73f6a_9-2
-    image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins-inbound-agent:3206.vb_15dcf73f6a_9-2
+    #image: jenkins/inbound-agent:3327.v868139a_d00e0-6
+    image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins-inbound-agent:3327.v868139a_d00e0-6
     imagePullPolicy: IfNotPresent
   volumes:
   - name: docker-socket
