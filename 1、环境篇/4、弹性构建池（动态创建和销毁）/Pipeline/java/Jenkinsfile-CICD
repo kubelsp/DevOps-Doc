@@ -106,7 +106,7 @@ JAVA_OPTS = "${JAVA_OPTS}"
 
         stage('代码编译') {
             steps {
-              container('golanmaveng') {
+              container('maven') {
                 sh """
                   mvn -U clean install -Dmaven.test.skip=true
                    """
