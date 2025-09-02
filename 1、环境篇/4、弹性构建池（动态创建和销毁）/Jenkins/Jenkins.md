@@ -1,14 +1,14 @@
-### 15、jenkins
+### jenkins
 
-k8s手撕yml方式部署最新版 Jenkins-2.485（jdk-21版）（Jenkins）
+k8s手撕yml方式部署最新版 Jenkins-2.525（jdk-21版）（Jenkins）
 
 > https://github.com/jenkinsci/jenkins
 >
 >https://hub.docker.com/r/jenkins/jenkins/
 >
-> k8s-v1.31.2
+> k8s-v1.34.0
 >
-> Jenkins-2.485
+> Jenkins-2.525
 
 ```shell
 mkdir -p ~/jenkins-yml
@@ -167,8 +167,8 @@ spec:
         jenkins: jenkins
       containers:
       - name: jenkins
-        #image: jenkins/jenkins:2.485-jdk21
-        image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins:2.485-jdk21
+        #image: jenkins/jenkins:2.525-jdk21
+        image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins:2.525-jdk21
         imagePullPolicy: IfNotPresent
         resources:
           limits:
@@ -271,7 +271,7 @@ kubectl apply -f ~/jenkins-yml/Jenkins-Ingress.yml
 
 > 访问地址：https://jenkins.openhhh.com
 >
-> 设置账号密码为：admin、Admin@2024
+> 设置账号密码为：admin、Admin@2025
 
 ```shell
 # 插件
