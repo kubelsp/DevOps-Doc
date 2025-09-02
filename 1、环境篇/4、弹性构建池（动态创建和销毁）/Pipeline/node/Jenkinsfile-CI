@@ -11,7 +11,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: jenkins-slave
-  namespace: jenkins-prod
+  namespace: jenkins
 spec:
   tolerations:
   - key: "no-pod"
@@ -19,8 +19,8 @@ spec:
     effect: "NoSchedule"
   containers:
   - name: docker
-    #image: docker:24.0.6
-    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:24.0.6
+    #image: docker:28.1.1
+    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:28.1.1
     imagePullPolicy: IfNotPresent
     readinessProbe:
       exec:
@@ -33,25 +33,36 @@ spec:
     - name: docker-socket
       mountPath: /var/run
   - name: docker-daemon
-    #image: docker:24.0.6-dind
-    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:24.0.6-dind
+    #image: docker:28.1.1-dind
+    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:28.1.1-dind
     imagePullPolicy: IfNotPresent
     securityContext:
       privileged: true
     volumeMounts:
     - name: docker-socket
       mountPath: /var/run
-  - name: maven
-    #image: maven:3.8.1-jdk-8
-    image: ccr.ccs.tencentyun.com/huanghuanhui/maven:3.8.1-jdk-8
+  - name: node
+    #image: node:16.17.0-alpine
+    image: ccr.ccs.tencentyun.com/huanghuanhui/node:18.12.0-alpine
     imagePullPolicy: IfNotPresent
     command:
     - sleep
     args:
     - 99d
     volumeMounts:
-    - name: maven-cache
-      mountPath: /root/.m2/repository
+    - name: node-cache
+      mountPath: /root/.npm
+  - name: alpine	
+    #image: alpine:3.19.0
+    image: ccr.ccs.tencentyun.com/huanghuanhui/alpine:3.19.0
+    imagePullPolicy: IfNotPresent
+    command:
+    - sleep
+    args:
+    - 99d
+    volumeMounts:
+    - name: node-cache
+      mountPath: /root/.npm
   - name: kubectl
     image: ccr.ccs.tencentyun.com/huanghuanhui/kubectl:v1.6.0
     imagePullPolicy: IfNotPresent
@@ -60,18 +71,15 @@ spec:
     args:
     - 99d
   - name: jnlp
-    #image: jenkins/inbound-agent:3206.vb_15dcf73f6a_9-2
-    image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins-inbound-agent:3206.vb_15dcf73f6a_9-2
+    #image: jenkins/inbound-agent:3327.v868139a_d00e0-6
+    image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins-inbound-agent:3327.v868139a_d00e0-6
     imagePullPolicy: IfNotPresent
   volumes:
   - name: docker-socket
     emptyDir: {}
-  - name: maven-cache
-    persistentVolumeClaim:
-      claimName: jenkins-prod-slave-maven-cache
   - name: node-cache
     persistentVolumeClaim:
-      claimName: jenkins-prod-slave-node-cache
+      claimName: jenkins-slave-node-cache
 '''
         }
     }
@@ -93,7 +101,7 @@ JAVA_OPTS = "${JAVA_OPTS}"
         string(name: 'Server', defaultValue: 'ccr.ccs.tencentyun.com', description: '仓库地址')
         string(name: 'RepoName', defaultValue: 'huanghuanhui/dev-blue-ruoyi-auth', description: '仓库名字（仓库自动创建）')
         string(name: 'BaseImage', defaultValue: 'ccr.ccs.tencentyun.com/huanghuanhui/openjdk:8-jre', description: '基础镜像')
-        string(name: 'JAVA_OPTS', defaultValue: '-Xms1024M -Xmx1024M -Xmn256M -Dspring.config.location=app.yml -Dserver.tomcat.max-threads=800', description: 'jar 运行时的参数配置')
+        string(name: 'JAVA_OPTS', defaultValue: '-Xms2048M -Xmx2048M -Xmn256M -Dspring.config.location=app.yml -Dserver.tomcat.max-threads=800', description: 'jar 运行时的参数配置')
     }
     
     stages {
@@ -103,11 +111,31 @@ JAVA_OPTS = "${JAVA_OPTS}"
 			}
 		}
 
+        stage('加载依赖') {
+            steps {
+              container('alpine') {
+                sh """
+                  #cp /root/.npm/node_modules.tar.gz . && tar xf node_modules.tar.gz
+                """
+                }
+            }
+        }
+        
         stage('代码编译') {
             steps {
-              container('maven') {
+              container('node') {
                 sh """
-                  mvn -U clean install -Dmaven.test.skip=true
+                  npm install --registry=https://registry.npmmirror.com  && npm run build:prod
+                """
+                }
+            }
+        }
+
+        stage('依赖持久化') {
+            steps {
+              container('alpine') {
+                sh """
+                  tar zcf node_modules.tar.gz node_modules && mv -f node_modules.tar.gz /root/.npm
                 """
                 }
             }
@@ -117,50 +145,76 @@ JAVA_OPTS = "${JAVA_OPTS}"
             steps {
               script {env.GIT_COMMIT_MSG = sh (script: 'git rev-parse --short HEAD', returnStdout: true).trim()}
               container('docker') {
-sh '''cat > entrypoint.sh << EOF
-#! /bash/bin -e
-env
-java $JAVA_OPTS -jar ./*.jar
-EOF
+sh '''
+cat > nginx.conf << 'EOF'
 
-cat > app.yml << EOF
-# Tomcat
-server:
-  port: 9200
+worker_processes  auto;
 
-# Spring
-spring:
-  application:
-    # 应用名称
-    name: ${AppName}
-  profiles:
-    # 环境配置
-    active: dev
-  cloud:
-    nacos:
-      discovery:
-        # 服务注册地址
-        server-addr: nacos-headless.nacos.svc.cluster.local:8848
-        namespace: blue-prod
-      config:
-        # 配置中心地址
-        server-addr: nacos-headless.nacos.svc.cluster.local:8848
-        namespace: blue-prod
-        # 配置文件格式
-        file-extension: yml
-        # 共享配置
-        shared-configs:
-          - application
+events {
+    worker_connections  10240;
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    server_tokens off; 					
+	sendfile        on;
+	tcp_nopush on;  				
+	keepalive_timeout  60;
+	client_max_body_size 100m;
+	gzip on;
+	gzip_disable "msie6";
+	gzip_proxied any;  				    
+	gzip_min_length 1k;  				
+	gzip_comp_level 5;  				
+	gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript;	
+	gzip_vary on;
+
+    server {
+        listen       80;
+        server_name  localhost;
+
+
+   location / {
+          root    /usr/share/nginx/html;
+          try_files $uri $uri/ /index.html;
+          index  index.html index.htm;
+      }
+      
+    location /admin-api/ { ## 后端项目 - 管理后台
+            proxy_pass http://prod-bi-svc:48080/admin-api/; ## 重要！！！proxy_pass 需要设置为后端项目所在服务器的IP
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header REMOTE-HOST $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /jmreport/ { ## 积木报表
+            proxy_pass http://prod-bi-svc:48080/jmreport/; ## 重要！！！proxy_pass 需要设置为后端项目所在服务器的 IP
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header REMOTE-HOST $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+        # 避免actuator暴露
+        if ($request_uri ~ "/actuator") {
+            return 403;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+    }
+}
 EOF
 
 
 cat > Dockerfile << EOF
 FROM ${BaseImage}
-WORKDIR /usr/local/src/
-ADD ./ruoyi-auth/target/ruoyi-auth.jar /usr/local/src/ruoyi-auth.jar
-ADD app.yml .
-ADD entrypoint.sh .
-ENTRYPOINT ["sh","./entrypoint.sh"]
+WORKDIR /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY ./dist /usr/share/nginx/html
 EOF
 
 docker build -t ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID} .

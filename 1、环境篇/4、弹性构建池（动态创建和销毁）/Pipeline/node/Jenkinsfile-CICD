@@ -4,7 +4,6 @@ def git_auth = "1fa96864-5699-483b-a920-2af11df61119"
 def harbor_auth = "1e0ae5b9-b151-45b9-a94f-bd02d803ff22"
 def kubectl_auth = "c26898c2-92c3-4c19-8490-9cf8ff7918ef"
 
-
 pipeline {
     agent {
         kubernetes {
@@ -13,17 +12,16 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: jenkins-slave
-  namespace: jenkins-prod
+  namespace: jenkins
 spec:
   tolerations:
-  - key: k8s-jenkins
-    operator: Equal
-    value: k8s-jenkins
-    effect: NoSchedule
+  - key: "no-pod"
+    operator: "Exists"
+    effect: "NoSchedule"
   containers:
   - name: docker
-    #image: docker:24.0.6
-    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:24.0.6
+    #image: docker:28.1.1
+    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:28.1.1
     imagePullPolicy: IfNotPresent
     readinessProbe:
       exec:
@@ -36,33 +34,53 @@ spec:
     - name: docker-socket
       mountPath: /var/run
   - name: docker-daemon
-    #image: docker:24.0.6-dind
-    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:24.0.6-dind
+    #image: docker:28.1.1-dind
+    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:28.1.1-dind
     imagePullPolicy: IfNotPresent
     securityContext:
       privileged: true
     volumeMounts:
     - name: docker-socket
       mountPath: /var/run
-  - name: golang
-    #image: golang:1.21.3
-    image: ccr.ccs.tencentyun.com/huanghuanhui/golang:1.21.3
+  - name: node
+    #image: node:16.17.0-alpine
+    image: ccr.ccs.tencentyun.com/huanghuanhui/node:18.12.0-alpine
     imagePullPolicy: IfNotPresent
     command:
     - sleep
     args:
     - 99d
+    volumeMounts:
+    - name: node-cache
+      mountPath: /root/.npm
+  - name: alpine	
+    #image: alpine:3.19.0
+    image: ccr.ccs.tencentyun.com/huanghuanhui/alpine:3.19.0
+    imagePullPolicy: IfNotPresent
+    command:
+    - sleep
+    args:
+    - 99d
+    volumeMounts:
+    - name: node-cache
+      mountPath: /root/.npm
   - name: kubectl
-    #image: kostiscodefresh/kubectl-argo-rollouts:v1.6.0
     image: ccr.ccs.tencentyun.com/huanghuanhui/kubectl:v1.6.0
     imagePullPolicy: IfNotPresent
     command:
     - sleep
     args:
     - 99d
+  - name: jnlp
+    #image: jenkins/inbound-agent:3327.v868139a_d00e0-6
+    image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins-inbound-agent:3327.v868139a_d00e0-6
+    imagePullPolicy: IfNotPresent
   volumes:
   - name: docker-socket
     emptyDir: {}
+  - name: node-cache
+    persistentVolumeClaim:
+      claimName: jenkins-slave-node-cache
 '''
         }
     }
@@ -74,21 +92,52 @@ GitBranch = "${GitBranch}"
 Server = "${Server}"
 RepoName = "${RepoName}"
 BaseImage = "${BaseImage}"
+JAVA_OPTS = "${JAVA_OPTS}"
 }
 
+    parameters {
+        string(name: 'AppName', defaultValue: 'blue-ruoyi-auth', description: '服务名')
+        string(name: 'GitRepo', defaultValue: 'https://gitlab.huanghuanhui.com/root/RuoYi-Cloud.git', description: '代码仓库地址')
+        string(name: 'GitBranch', defaultValue: 'blue', description: '代码版本')
+        string(name: 'Server', defaultValue: 'ccr.ccs.tencentyun.com', description: '仓库地址')
+        string(name: 'RepoName', defaultValue: 'huanghuanhui/dev-blue-ruoyi-auth', description: '仓库名字（仓库自动创建）')
+        string(name: 'BaseImage', defaultValue: 'ccr.ccs.tencentyun.com/huanghuanhui/openjdk:8-jre', description: '基础镜像')
+        string(name: 'JAVA_OPTS', defaultValue: '-Xms2048M -Xmx2048M -Xmn256M -Dspring.config.location=app.yml -Dserver.tomcat.max-threads=800', description: 'jar 运行时的参数配置')
+    }
+    
     stages {
         stage('拉取代码') {
+			steps {
+			git branch: "${GitBranch}", credentialsId: "${git_auth}", url: "${GitRepo}"
+			}
+		}
+
+        stage('加载依赖') {
             steps {
-            git branch: "${GitBranch}", credentialsId: "${git_auth}", url: "${GitRepo}"
+              container('alpine') {
+                sh """
+                  #cp /root/.npm/node_modules.tar.gz . && tar xf node_modules.tar.gz
+                """
+                }
+            }
+        }
+        
+        stage('代码编译') {
+            steps {
+              container('node') {
+                sh """
+                  npm install --registry=https://registry.npmmirror.com  && npm run build:prod
+                """
+                }
             }
         }
 
-        stage('代码编译') {
+        stage('依赖持久化') {
             steps {
-              container('golang') {
+              container('alpine') {
                 sh """
-                 ls -l
-                   """
+                  tar zcf node_modules.tar.gz node_modules && mv -f node_modules.tar.gz /root/.npm
+                """
                 }
             }
         }
@@ -98,12 +147,78 @@ BaseImage = "${BaseImage}"
               script {env.GIT_COMMIT_MSG = sh (script: 'git rev-parse --short HEAD', returnStdout: true).trim()}
               container('docker') {
 sh '''
+cat > nginx.conf << 'EOF'
+
+worker_processes  auto;
+
+events {
+    worker_connections  10240;
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    server_tokens off; 					
+	sendfile        on;
+	tcp_nopush on;  				
+	keepalive_timeout  60;
+	client_max_body_size 100m;
+	gzip on;
+	gzip_disable "msie6";
+	gzip_proxied any;  				    
+	gzip_min_length 1k;  				
+	gzip_comp_level 5;  				
+	gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript;	
+	gzip_vary on;
+
+    server {
+        listen       80;
+        server_name  localhost;
+
+
+   location / {
+          root    /usr/share/nginx/html;
+          try_files $uri $uri/ /index.html;
+          index  index.html index.htm;
+      }
+      
+    location /admin-api/ { ## 后端项目 - 管理后台
+            proxy_pass http://prod-bi-svc:48080/admin-api/; ## 重要！！！proxy_pass 需要设置为后端项目所在服务器的IP
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header REMOTE-HOST $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /jmreport/ { ## 积木报表
+            proxy_pass http://prod-bi-svc:48080/jmreport/; ## 重要！！！proxy_pass 需要设置为后端项目所在服务器的 IP
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header REMOTE-HOST $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+        # 避免actuator暴露
+        if ($request_uri ~ "/actuator") {
+            return 403;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+    }
+}
+EOF
+
+
 cat > Dockerfile << EOF
 FROM ${BaseImage}
 WORKDIR /usr/share/nginx/html
-ADD ./* /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY ./dist /usr/share/nginx/html
 EOF
-docker build -t ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID} . && docker images
+
+docker build -t ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID} .
 '''
                 }
             }
@@ -121,14 +236,14 @@ docker build -t ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID}
                 }
             }
         }
-        
-        stage('argo-rollouts + istio（金丝雀发布）（渐进式交付）') {
+
+        stage('kubectl部署') {
             steps {
               container('kubectl') {
               configFileProvider([configFile(fileId: "${kubectl_auth}", variable: 'kubeconfig')]) {
                 sh """
                 mkdir -p ~/.kube && cp ${kubeconfig} ~/.kube/config
-                 /app/kubectl-argo-rollouts-linux-amd64 set image ${AppName} "*=${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID}" -n prod
+                kubectl set image deployment/prod-bi-front prod-bi-front=${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID} -n prod
                 """
                    }
                 }
