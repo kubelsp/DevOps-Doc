@@ -70,6 +70,13 @@ spec:
     - sleep
     args:
     - 99d
+  - name: sonar-scanner
+    image: ccr.ccs.tencentyun.com/huanghuanhui/sonar-scanner-cli:11.4
+    imagePullPolicy: IfNotPresent
+    command:
+    - sleep
+    args:
+    - 99d
   - name: jnlp
     #image: jenkins/inbound-agent:3327.v868139a_d00e0-6
     image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins-inbound-agent:3327.v868139a_d00e0-6
@@ -103,13 +110,28 @@ JAVA_OPTS = "${JAVA_OPTS}"
         string(name: 'BaseImage', defaultValue: 'ccr.ccs.tencentyun.com/huanghuanhui/openjdk:8-jre', description: '基础镜像')
         string(name: 'JAVA_OPTS', defaultValue: '-Xms2048M -Xmx2048M -Xmn256M -Dspring.config.location=app.yml -Dserver.tomcat.max-threads=800', description: 'jar 运行时的参数配置')
     }
-    
+
     stages {
         stage('拉取代码') {
-			steps {
-			git branch: "${GitBranch}", credentialsId: "${git_auth}", url: "${GitRepo}"
-			}
-		}
+            steps {
+            git branch: "${GitBranch}", credentialsId: "${git_auth}", url: "${GitRepo}"
+            }
+        }
+
+        stage('SonarQube 代码扫描') {
+            steps {
+                container('sonar-scanner') {
+                    withCredentials([string(credentialsId: '2a5e8f48-ffe9-4f44-ab63-08af986875e9', variable: 'SONAR_TOKEN')]) {
+                        sh """
+                        sonar-scanner \
+                          -Dsonar.projectKey=${AppName} \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=http://sonarqube-service.sonarqube:9000 \
+                        """
+                    }
+                }
+            }
+        }
 
         stage('加载依赖') {
             steps {

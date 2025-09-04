@@ -64,6 +64,13 @@ spec:
     - sleep
     args:
     - 99d
+  - name: sonar-scanner
+    image: ccr.ccs.tencentyun.com/huanghuanhui/sonar-scanner-cli:11.4
+    imagePullPolicy: IfNotPresent
+    command:
+    - sleep
+    args:
+    - 99d
   - name: jnlp
     #image: jenkins/inbound-agent:3327.v868139a_d00e0-6
     image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins-inbound-agent:3327.v868139a_d00e0-6
@@ -104,6 +111,21 @@ BaseImage = "${BaseImage}"
         stage('拉取代码') {
             steps {
             git branch: "${GitBranch}", credentialsId: "${git_auth}", url: "${GitRepo}"
+            }
+        }
+
+        stage('SonarQube 代码扫描') {
+            steps {
+                container('sonar-scanner') {
+                    withCredentials([string(credentialsId: '2a5e8f48-ffe9-4f44-ab63-08af986875e9', variable: 'SONAR_TOKEN')]) {
+                        sh """
+                        sonar-scanner \
+                          -Dsonar.projectKey=${AppName} \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=http://sonarqube-service.sonarqube:9000 \
+                        """
+                    }
+                }
             }
         }
 
