@@ -17,9 +17,9 @@ kubectl create ns jenkins
 ```
 
 ```shell
-# kubectl label node k8s-jenkins jenkins=jenkins
+kubectl label node k8s-jenkins jenkins=jenkins
 
-kubectl label node k8s-node1 jenkins=jenkins
+kubectl taint nodes k8s-jenkins jenkins=jenkins:NoSchedule
 ```
 
 ```shell
@@ -156,8 +156,9 @@ spec:
     spec:
       tolerations:
       - effect: NoSchedule
-        key: no-pod
-        operator: Exists
+        key: jenkins
+        operator: Equal
+        value: jenkins
       nodeSelector:
         jenkins: jenkins
       serviceAccountName: jenkins
