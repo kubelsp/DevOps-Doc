@@ -665,6 +665,8 @@ kubectl apply -f ~/calico-yml/calico.yaml
 
 https://cilium.io/use-cases/kube-proxy/
 
+https://docs.cilium.io/en/stable/network/kubernetes/compatibility/
+
 > 在 L3 网络下，Cilium 的推荐安装模式：Cilium-Overlay
 >
 > Cilium 功能：网络功能
