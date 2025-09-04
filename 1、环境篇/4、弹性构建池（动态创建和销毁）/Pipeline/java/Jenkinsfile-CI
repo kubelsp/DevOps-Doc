@@ -107,7 +107,7 @@ JAVA_OPTS = "${JAVA_OPTS}"
             }
         }
 
-        stage('SonarQube 代码扫描') {
+        stage('代码扫描') {
             steps {
                 container('sonar-scanner') {
                     withCredentials([string(credentialsId: '2a5e8f48-ffe9-4f44-ab63-08af986875e9', variable: 'SONAR_TOKEN')]) {
