@@ -25,11 +25,6 @@ kubectl label node k8s-node1 jenkins=jenkins
 ```shell
 cat > ~/jenkins-yml/Jenkins-rbac.yml << 'EOF'
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: jenkins
----
-apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: jenkins
@@ -165,6 +160,7 @@ spec:
         operator: Exists
       nodeSelector:
         jenkins: jenkins
+      serviceAccountName: jenkins
       containers:
       - name: jenkins
         #image: jenkins/jenkins:2.525-jdk21
