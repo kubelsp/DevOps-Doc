@@ -1,10 +1,10 @@
 ### k8s手撕yml方式安装sonarqube
 
-> k8s-v1.30.0
+> k8s-v1.34.0
 >
-> postgres:16.2
+> postgres:17.6
 >
-> sonarqube:9.9.4-community
+> sonarqube:25.9.0.112764-community
 >
 > 
 >
@@ -39,17 +39,17 @@ spec:
       containers:
       - name: sonarqube-postgres
         #image: postgres:16.2
-        image: ccr.ccs.tencentyun.com/huanghuanhui/postgres:16.2
+        image: ccr.ccs.tencentyun.com/huanghuanhui/postgres:17.6
         imagePullPolicy: IfNotPresent
         env:
         - name: TZ
           value: Asia/Shanghai
         - name: POSTGRES_PASSWORD
-          value: "sonarqube@2024"
+          value: "sonarqube@2025"
         - name: POSTGRES_USER
           value: "sonarqube"
         - name:  POSTGRES_DB
-          value: "sonarDB"
+          value: "sonarqube"
         - name: POSTGRES_EXTENSION
           value: 'pg_trgm,btree_gist'
         ports:
@@ -102,13 +102,12 @@ kubectl apply -f ~/sonarqube-yml/sonarqube-postgres.yml
 ```
 
 ```shell
-kubectl run sonarqube-postgresql-client --rm --tty -i --restart='Never' --image=ccr.ccs.tencentyun.com/huanghuanhui/postgres:16.2 --command -- bash
+kubectl exec -it sonarqube-postgres-0 -- \
+bash -c "PGPASSWORD='sonarqube@2025' psql -h sonarqube-postgres-headless -U sonarqube -d sonarqube"
 
-PGPASSWORD=sonarqube@2024 psql -h sonarqube-postgres-headless -U sonarqube -d sonarDB
-
-gitlab_production=# \l
-gitlab_production=# \d	#第一次查看数据为空，请sonarqube初始化完成，再次查看数据
-gitlab_production=# \q
+sonarqube=# \l
+sonarqube=# \d	#第一次查看数据为空，请sonarqube初始化完成，再次查看数据
+sonarqube=# \q
 ```
 
 ```shell
@@ -132,8 +131,8 @@ spec:
     spec:
       containers:
       - name: sonarqube
-        #image: sonarqube:9.9.4-community
-        image: ccr.ccs.tencentyun.com/huanghuanhui/sonarqube:9.9.4-community
+        #image: sonarqube:25.9.0.112764-community
+        image: ccr.ccs.tencentyun.com/huanghuanhui/sonarqube:25.9.0.112764-community
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9000
@@ -141,9 +140,9 @@ spec:
         - name: SONAR_JDBC_USERNAME
           value: "sonarqube"
         - name: SONAR_JDBC_PASSWORD
-          value: "sonarqube@2024"
+          value: "sonarqube@2025"
         - name: SONAR_JDBC_URL
-          value: "jdbc:postgresql://sonarqube-postgres-headless:5432/sonarDB"
+          value: "jdbc:postgresql://sonarqube-postgres-headless:5432/sonarqube"
         livenessProbe:
           httpGet:
             path: /sessions/new
@@ -218,6 +217,8 @@ metadata:
   name: sonarqube-ingress
   namespace: sonarqube
   annotations:
+    cert-manager.io/cluster-issuer: prod-issuer 
+    acme.cert-manager.io/http01-edit-in-place: "true" 
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
     nginx.ingress.kubernetes.io/proxy-body-size: '4G'
 spec:
@@ -242,10 +243,10 @@ EOF
 ```
 
 ```shell
-kubectl create secret -n sonarqube \
-tls sonarqube-ingress-tls \
---key=/root/ssl/openhhh.com.key \
---cert=/root/ssl/openhhh.com.pem
+#kubectl create secret -n sonarqube \
+#tls sonarqube-ingress-tls \
+#--key=/root/ssl/openhhh.com.key \
+#--cert=/root/ssl/openhhh.com.pem
 ```
 
 ```shell
@@ -254,4 +255,4 @@ kubectl apply -f ~/sonarqube-yml/sonarqube-Ingress.yml
 
 > 访问地址：https://sonarqube.openhhh.com
 >
-> 用户密码：admin、admin（初始化密码）、Admin@2024
+> 用户密码：admin、admin（初始化密码）、sonarqube@2025
