@@ -1,3 +1,11 @@
+k8s 部署 雷池 WAF（开源waf）
+
+> https://waf-ce.chaitin.cn/
+>
+> https://github.com/chaitin/SafeLine
+>
+> https://help.waf-ce.chaitin.cn/node/01973fc6-e12f-789f-a8ff-e81d383c80bc
+
 `````shell
 cat > waf-postgresql.yml << 'EOF'
 apiVersion: apps/v1
