@@ -468,8 +468,32 @@ EOF
 ```
 
 ````shell
-resetadmin（safeline-mgt -- pod运行重新初始化密码）
+resetadmin（在safeline-mgt -- pod运行重新初始化密码）
 
 waf.openhhh.com admin、NZv5dq4v
+````
+
+````shell
+[root@k8s-master ~/waf-yml]# po
+NAME                           READY   STATUS    RESTARTS      AGE
+waf-chaos-75f5488f9b-nc95c     1/1     Running   0             48m
+waf-detect-684866f78-dcxcm     1/1     Running   0             48m
+waf-fvm-cdf9d7fd-jmw8l         1/1     Running   0             48m
+waf-luigi-84d47f8f-dvfqw       1/1     Running   1 (47m ago)   48m
+waf-mgt-94675856f-x5hfp        1/1     Running   1 (47m ago)   48m
+waf-postgres-0                 1/1     Running   0             49m
+waf-tengine-5cd757f8fd-wgsql   1/1     Running   0             48m
+[root@k8s-master ~/waf-yml]# svc
+NAME                    TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                                                     AGE
+safeline-chaos          ClusterIP   10.106.189.21   <none>        9000/TCP,8080/TCP,8088/TCP                                  48m
+safeline-detector       ClusterIP   10.111.16.140   <none>        8001/TCP,7777/TCP                                           48m
+safeline-fvm            ClusterIP   10.98.179.187   <none>        80/TCP                                                      48m
+safeline-mgt            NodePort    10.99.127.158   <none>        1443:32443/TCP,80:32314/TCP,8000:30157/TCP,6060:32126/TCP   48m
+safeline-tengine        NodePort    10.97.203.87    <none>        65443:30443/TCP                                             48m
+waf-postgres-headless   ClusterIP   None            <none>        5432/TCP                                                    49m
+[root@k8s-master ~/waf-yml]# ingress 
+NAME          CLASS   HOSTS            ADDRESS    PORTS     AGE
+waf-ingress   nginx   waf.openhhh.com   10.1.8.4   80, 443   41m
+[root@k8s-doris ~/waf-yml]# 
 ````
 
