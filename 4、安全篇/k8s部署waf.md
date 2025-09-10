@@ -470,6 +470,7 @@ EOF
 ````shell
 resetadmin（在safeline-mgt -- pod运行重新初始化密码）
 
+访问地址：
 waf.openhhh.com admin、NZv5dq4v
 ````
 
