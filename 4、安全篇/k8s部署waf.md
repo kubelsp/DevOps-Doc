@@ -474,6 +474,9 @@ waf.openhhh.com admin、NZv5dq4v
 ````
 
 ````shell
+[root@k8s-master ~/waf-yml]# kubens waf
+Context "kubernetes-admin@kubernetes" modified.
+Active namespace is "waf".
 [root@k8s-master ~/waf-yml]# po
 NAME                           READY   STATUS    RESTARTS      AGE
 waf-chaos-75f5488f9b-nc95c     1/1     Running   0             48m
