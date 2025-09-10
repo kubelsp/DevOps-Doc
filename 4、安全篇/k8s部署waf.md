@@ -442,7 +442,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: waf.wjxtzd.com
+  - host: waf.openhhh.com
     http:
       paths:
       - path: /
@@ -454,14 +454,14 @@ spec:
               number: 1443  # 你的 HTTPS 服务端口
   tls:
   - hosts:
-    - waf.wjxtzd.com
+    - waf.openhhh.com
     secretName: waf-ingress-tls
 EOF
 ```
 
 ````shell
-resetadmin
+resetadmin（safeline-mgt -- pod运行重新初始化密码）
 
-waf.wjxtzd.com admin、NZv5dq4v
+waf.openhhh.com admin、NZv5dq4v
 ````
 
