@@ -1,0 +1,246 @@
+#!/usr/bin/env groovy
+
+def git_auth = "1fa96864-5699-483b-a920-2af11df61119"
+def image_auth = "1e0ae5b9-b151-45b9-a94f-bd02d803ff22"
+def sonarqube_auth = "2a5e8f48-ffe9-4f44-ab63-08af986875e9"
+def kubectl_auth = "c26898c2-92c3-4c19-8490-9cf8ff7918ef"
+
+
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  name: jenkins-slave
+  namespace: jenkins
+spec:
+  tolerations:
+  - key: k8s-jenkins
+    operator: Equal
+    value: k8s-jenkins
+    effect: NoSchedule
+  imagePullSecrets:
+  - name: ecr-regcred
+  containers:
+  - name: docker
+    #image: docker:28.1.1
+    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:28.1.1
+    imagePullPolicy: IfNotPresent
+    readinessProbe:
+      exec:
+        command: [sh, -c, "ls -S /var/run/docker.sock"]
+    command:
+    - sleep
+    args:
+    - 99d
+    volumeMounts:
+    - name: docker-socket
+      mountPath: /var/run
+  - name: docker-daemon
+    #image: docker:28.1.1-dind
+    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:28.1.1-dind
+    imagePullPolicy: IfNotPresent
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: docker-socket
+      mountPath: /var/run
+  - name: aws
+    #image: docker:28.1.1
+    image: 676206931376.dkr.ecr.ap-southeast-1.amazonaws.com/devops:aws
+    imagePullPolicy: IfNotPresent
+    readinessProbe:
+      exec:
+        command: [sh, -c, "ls -S /var/run/docker.sock"]
+    command:
+    - sleep
+    args:
+    - 99d
+    volumeMounts:
+    - name: docker-socket
+      mountPath: /var/run
+    - name: latest-image-cache
+      mountPath: /image
+  - name: golang
+    #image: golang:1.24.2
+    image: ccr.ccs.tencentyun.com/huanghuanhui/golang:1.24.2
+    imagePullPolicy: IfNotPresent
+    command:
+    - sleep
+    args:
+    - 99d
+    volumeMounts:
+    - name: golang-cache
+      mountPath: /go/pkg/mod
+    - name: go-build-cache
+      mountPath: /root/.cache/go-build
+  - name: sonar-scanner
+    #image: sonarsource/sonar-scanner-cli:11.4
+    image: ccr.ccs.tencentyun.com/huanghuanhui/sonar-scanner-cli:11.4
+    imagePullPolicy: IfNotPresent
+    command:
+    - sleep
+    args:
+    - 99d
+  - name: jnlp
+    #image: jenkins/inbound-agent:3327.v868139a_d00e0-6
+    image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins-inbound-agent:3327.v868139a_d00e0-6
+    imagePullPolicy: IfNotPresent
+  volumes:
+  - name: docker-socket
+    emptyDir: {}
+  - name: golang-cache
+    persistentVolumeClaim:
+      claimName: jenkins-slave-golang-cache
+  - name: go-build-cache
+    persistentVolumeClaim:
+      claimName: jenkins-slave-go-build-cache
+  - name: latest-image-cache
+    persistentVolumeClaim:
+      claimName: jenkins-slave-latest-image-cache
+'''
+        }
+    }
+
+    parameters {
+        string(name: 'AppName', defaultValue: 'hhh', description: '服务名')
+        string(name: 'GitRepo', defaultValue: 'https://git.openhhh.com/go_hhh/hhh.git', description: '代码仓库地址')
+        string(name: 'GitBranch', defaultValue: 'master', description: '代码版本')
+        string(name: 'Server', defaultValue: '202506931376.dkr.ecr.ap-southeast-1.amazonaws.com', description: '仓库地址')
+        string(name: 'RepoName', defaultValue: 'hhh', description: '仓库名字（仓库自动创建）')
+        string(name: 'BaseImage', defaultValue: 'rockylinux/rockylinux:10', description: '基础镜像')
+    }
+
+    stages {
+        stage('拉取代码') {
+            steps {
+            git branch: "${GitBranch}", credentialsId: "${git_auth}", url: "${GitRepo}"
+            }
+        }
+
+        stage('代码扫描') {
+            steps {
+                container('sonar-scanner') {
+                        sh """
+                        sonar-scanner \
+                          -Dsonar.projectKey=cashout \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=http://sonarqube-service.sonarqube:9000 \
+                          -Dsonar.login=sqa_a5441506b11076592a0ab04839ab0bca9c6ced38
+                        """
+                }
+            }
+        }
+        
+        stage('代码编译') {
+            steps {
+              container('golang') {
+                sh """
+cat > ~/.netrc << 'EOF'
+machine git.openhhh.com
+login jenkins
+password kkkk-kkkrduiYkFxDgTHA3kkk
+EOF
+
+go mod tidy
+
+cd hhh && GOOS=linux GOARCH=amd64 go build -ldflags "-X main.Version= -s -w" -buildvcs=false -o app
+
+ls -l
+
+cp app ../
+                   """
+                }
+            }
+        }
+
+        stage('打包镜像') {
+            steps {
+              script {env.GIT_COMMIT_MSG = sh (script: 'git rev-parse --short HEAD', returnStdout: true).trim()}
+              container('docker') {
+sh '''
+cat > Dockerfile << EOF
+FROM rockylinux/rockylinux:10
+
+# 创建应用目录
+RUN mkdir -p /app
+WORKDIR /app
+
+# 复制预编译的二进制文件和配置文件
+COPY app /app/app
+COPY ./common/mi18n/translations/lang.yaml /app/common/mi18n/translations/lang.yaml
+
+# 暴露端口
+EXPOSE 8080
+
+# 设置启动命令 (使用配置文件)
+CMD ["/app/app",  "serve", "http","push", "retry", "notify", "merCallback", "query", "orderStatistics", "payoutOrderRepair"]
+EOF
+
+docker build -t ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID} .
+'''
+                }
+            }
+        }
+
+        stage('推送镜像') {
+            steps {
+              container('aws') {
+                sh """
+aws --version
+
+aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 202506931376.dkr.ecr.ap-southeast-1.amazonaws.com
+
+docker push ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID}
+
+echo ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID}  >> /image/hhh-latest-images.sh
+                """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                // 获取当前北京时间
+                def buildTime = new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Shanghai'))
+
+                // 获取触发人
+                def cause = currentBuild.getBuildCauses()[0]
+                def user = cause.userName ?: "系统触发"
+
+                // 构造消息
+                def msg = "✅ 镜像构建成功：\\n 应用：hhh \\n 分支：${GitBranch} \\n 镜像：${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID}  \\n 运行人：${user}\\n 时间：${buildTime}"
+                def payload = """{"msg_type":"text","content":{"text":"${msg}"}}"""
+
+                // 发送到飞书
+                sh """
+                curl -s -X POST -H "Content-Type: application/json" \
+                    -d '${payload}' \
+                    "https://open.larksuite.com/open-apis/bot/v2/hook/202572e3-1a5e-4351-a633-a9f2897e72025"
+                """
+            }
+        }
+
+        failure {
+            script {
+                // 获取当前北京时间
+                def buildTime = new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Shanghai'))
+
+                // 构造消息
+                def msg = "❌ 镜像构建失败：\\n 应用：cashout \\n 分支：${GitBranch} \\n 镜像：${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID} \\n 时间：${buildTime}"
+                def payload = """{"msg_type":"text","content":{"text":"${msg}"}}"""
+
+                // 发送到飞书
+                sh """
+                curl -s -X POST -H "Content-Type: application/json" \
+                    -d '${payload}' \
+                    "https://open.larksuite.com/open-apis/bot/v2/hook/202572e3-1a5e-4351-a633-a9f2897e72025"
+                """
+            }
+        }
+    }
+}
