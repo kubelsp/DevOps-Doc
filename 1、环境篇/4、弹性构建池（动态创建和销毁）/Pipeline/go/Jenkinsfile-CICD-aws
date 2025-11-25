@@ -25,8 +25,8 @@ spec:
   - name: ecr-regcred
   containers:
   - name: docker
-    #image: docker:28.1.1
-    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:28.1.1
+    #image: ccr.ccs.tencentyun.com/huanghuanhui/docker:29.0.4
+    image: docker:29.0.4
     imagePullPolicy: IfNotPresent
     readinessProbe:
       exec:
@@ -39,8 +39,8 @@ spec:
     - name: docker-socket
       mountPath: /var/run
   - name: docker-daemon
-    #image: docker:28.1.1-dind
-    image: ccr.ccs.tencentyun.com/huanghuanhui/docker:28.1.1-dind
+    #image: ccr.ccs.tencentyun.com/huanghuanhui/docker:28.1.1-dind
+    image: docker:29.0.4-dind
     imagePullPolicy: IfNotPresent
     securityContext:
       privileged: true
@@ -64,8 +64,8 @@ spec:
     - name: latest-image-cache
       mountPath: /image
   - name: golang
-    #image: golang:1.24.2
-    image: ccr.ccs.tencentyun.com/huanghuanhui/golang:1.24.2
+    #image: ccr.ccs.tencentyun.com/huanghuanhui/golang:1.24.2
+    image: golang:1.24.2
     imagePullPolicy: IfNotPresent
     command:
     - sleep
@@ -77,16 +77,16 @@ spec:
     - name: go-build-cache
       mountPath: /root/.cache/go-build
   - name: sonar-scanner
-    #image: sonarsource/sonar-scanner-cli:11.4
-    image: ccr.ccs.tencentyun.com/huanghuanhui/sonar-scanner-cli:11.4
+    #image: ccr.ccs.tencentyun.com/huanghuanhui/sonar-scanner-cli:11.4
+    image: sonarsource/sonar-scanner-cli:11.4
     imagePullPolicy: IfNotPresent
     command:
     - sleep
     args:
     - 99d
   - name: jnlp
-    #image: jenkins/inbound-agent:3327.v868139a_d00e0-6
-    image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins-inbound-agent:3327.v868139a_d00e0-6
+    #image: ccr.ccs.tencentyun.com/huanghuanhui/jenkins-inbound-agent:3327.v868139a_d00e0-6
+    image: jenkins/inbound-agent:3327.v868139a_d00e0-6
     imagePullPolicy: IfNotPresent
   volumes:
   - name: docker-socket
