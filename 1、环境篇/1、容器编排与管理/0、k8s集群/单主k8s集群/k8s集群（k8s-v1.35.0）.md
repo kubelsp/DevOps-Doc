@@ -12,12 +12,12 @@ containerd-2.2.1 + k8s-v1.35.0（最新）（kubeadm方式）（containerd容器
 >
 > k8s-v1.35.0
 
-> - k8s-master（rocky-9.6）（4c8g-200g）
-> - k8s-node1（rocky-9.6）（8c16g-200g）
-> - k8s-node2（rocky-9.6）（8c16g-200g）
-> - k8s-node3（rocky-9.6）（8c16g-200g）
+> - k8s-master（rocky-10.1）（4c8g-200g）
+> - k8s-node1（rocky-10.1）（8c16g-200g）
+> - k8s-node2（rocky-10.1）（8c16g-200g）
+> - k8s-node3（rocky-10.1）（8c16g-200g）
 
-### 0、环境准备（rocky-9.6 环境配置+调优）
+### 0、环境准备（rocky-10.1 环境配置+调优）
 
 ```shell
 # 颜色
@@ -25,7 +25,7 @@ echo "PS1='\[\033[35m\][\[\033[00m\]\[\033[31m\]\u\[\033[33m\]\[\033[33m\]@\[\03
 
 echo 'PS1="[\[\e[33m\]\u\[\e[0m\]\[\e[31m\]@\[\e[0m\]\[\e[35m\]\h\[\e[0m\]:\[\e[32m\]\w\[\e[0m\]] \[\e[33m\]\t\[\e[0m\] \[\e[31m\]Power\[\e[0m\]=\[\e[32m\]\!\[\e[0m\] \[\e[35m\]^0^\[\e[0m\]\n\[\e[95m\]公主请输命令^0^\[\e[0m\] \[\e[36m\]\\$\[\e[0m\] "' >> ~/.bashrc && source ~/.bashrc
 
-# 0、rocky-9.6 环境配置
+# 0、rocky-10.1 环境配置
 
 # 腾讯源
 sed -e 's|^mirrorlist=|#mirrorlist=|g' \
@@ -214,7 +214,7 @@ grep -vE "^\s*#" /etc/security/limits.conf
 ulimit -a
 ```
 
-### 1、安装containerd-2.2.1（官方源、腾讯源）(rocky-9.6 )
+### 1、安装containerd-2.2.1（官方源、腾讯源）(rocky-10.1 )
 
 ```shell
 # wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
@@ -325,7 +325,7 @@ debug: false
 EOF
 ```
 
-### 2、安装k8s（kubeadm-1.33.4、kubelet-1.33.4、kubectl-1.33.4）（官方源）(rocky-9.6 )
+### 2、安装k8s（kubeadm-1.33.4、kubelet-1.33.4、kubectl-1.33.4）（官方源）(rocky-10.1 )
 
 ```shell
 # 官方源
