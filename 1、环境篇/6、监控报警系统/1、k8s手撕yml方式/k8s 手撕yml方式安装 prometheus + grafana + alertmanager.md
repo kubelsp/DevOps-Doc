@@ -1123,7 +1123,7 @@ EOF
 
 ```shell
 # 更新前面创建空的prometheus-rules的ConfigMap
-kubectl create configmap prometheus-rules \
+kubectl -n monitoring create configmap prometheus-rules \
 --from-file=hosts.rules.yml \
 --from-file=kubeadm.rules.yml \
 --from-file=pod.rules.yml \
