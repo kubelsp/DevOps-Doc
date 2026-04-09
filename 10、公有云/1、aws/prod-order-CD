@@ -1,0 +1,156 @@
+#!/usr/bin/env groovy
+import groovy.json.JsonOutput
+
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  name: jenkins-slave
+  namespace: jenkins
+spec:
+  tolerations:
+  - key: k8s-jenkins
+    operator: Equal
+    value: k8s-jenkins
+    effect: NoSchedule
+  imagePullSecrets:
+  - name: ecr-regcred
+  containers:
+  - name: aws
+    image: xxxxxxxxxxx.dkr.ecr.ap-southeast-1.amazonaws.com/devops:aws
+    imagePullPolicy: IfNotPresent
+    command:
+    - sleep
+    args:
+    - 99d
+    volumeMounts:
+    - name: latest-image-cache
+      mountPath: /image
+  - name: jnlp
+    image: jenkins/inbound-agent:3327.v868139a_d00e0-6
+    imagePullPolicy: IfNotPresent
+  volumes:
+  - name: latest-image-cache
+    persistentVolumeClaim:
+      claimName: jenkins-slave-latest-image-cache
+'''
+        }
+    }
+
+    environment {
+        AppName   = "${AppName}"
+        GitRepo   = "${GitRepo}"
+        GitBranch = "${GitBranch}"
+        Server    = "${Server}"
+        RepoName  = "${RepoName}"
+        BaseImage = "${BaseImage}"
+        PreProd = "${PreProd}"
+    }
+
+    parameters {
+        string(name: 'PreProd', defaultValue: 'release', description: 'release -->对应release分之、prod -->对应master分之、pre -->对应pre分之')
+    }
+
+    stages {
+
+        stage('金丝雀发布') {
+            steps {
+                container('aws') {
+                    script {
+                        // 1️⃣ 获取镜像
+                        def latest = sh(script: "tail -n 1 /image/${PreProd}-order-latest-images.sh || true", returnStdout: true).trim()
+                        if (!latest) {
+                            error("❌ 未找到最新镜像信息，请检查 /image/${PreProd}-order-latest-images.sh 是否存在且有内容")
+                        }
+
+                        echo "🎯 使用镜像: ${latest}"
+
+                        // 2️⃣ 更新 EKS 配置
+                        sh '''
+cat > ~/.aws/config << 'EOF'
+[default]
+region = ap-southeast-3
+output = json
+EOF
+
+cat > ~/.aws/credentials << 'EOF'
+[default]
+aws_access_key_id = xxxxxxxxxxxxxx
+aws_secret_access_key = xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+EOF
+                        aws --version
+                        aws sts get-caller-identity
+                        aws eks update-kubeconfig --region ap-southeast-3 --name eks-xxxxxxxxxxxxxx
+                        kubectl get node
+                        '''
+
+                        // 3️⃣ 执行 Argo Rollouts 更新镜像
+                        sh """
+                        kubectl argo rollouts set image order-http "*=${latest}" -n prod-xxxxxxxxxxxxxx
+                        
+                        kubectl argo rollouts status order-http -n prod-xxxxxxxxxxxxxx --watch --timeout=10m
+                        """
+
+                        // 4️⃣ 保存镜像地址供 post 阶段使用
+                        env.LATEST_IMAGE = latest
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                // 获取当前北京时间
+                def buildTime = new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Shanghai'))
+
+                // 获取触发人
+                def cause = currentBuild.getBuildCauses()[0]
+                def user = cause.userName ?: "系统触发"
+                
+                def latest = env.LATEST_IMAGE ?: "unknown"
+                def msg = """✅ 发布成功：
+国家：印尼BP
+环境：生产环境
+应用：order-http
+镜像：${latest}
+运行人：${user}
+时间：${buildTime}
+"""
+                // ✅ 使用 JsonOutput 确保合法 JSON
+                def payload = JsonOutput.toJson([
+                    msg_type: "text",
+                    content: [text: msg]
+                ])
+                sh """
+                curl -s -X POST \
+                  -H 'Content-Type: application/json' \
+                  -d '${payload}' \
+                  "https://open.larksuite.com/open-apis/bot/v2/hook/xxxxxxxxxxxxxx-xxxxxxxxxxxxxx-xxxxxxxxxxxxxx-xxxxxxxxxxxxxx-xxxxxxxxxxxxxx"
+                """
+            }
+        }
+
+        failure {
+            script {
+                def msg = """❌ 构建失败：
+应用：channel-http
+"""
+                def payload = JsonOutput.toJson([
+                    msg_type: "text",
+                    content: [text: msg]
+                ])
+                sh """
+                curl -s -X POST \
+                  -H 'Content-Type: application/json' \
+                  -d '${payload}' \
+                  "https://open.larksuite.com/open-apis/bot/v2/hook/xxxxxxxxxxxxxx-xxxxxxxxxxxxxx-xxxxxxxxxxxxxx-xxxxxxxxxxxxxx-xxxxxxxxxxxxxx"
+                """
+            }
+        }
+    }
+}
