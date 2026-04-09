@@ -1,0 +1,251 @@
+#!/usr/bin/env groovy
+import groovy.json.JsonOutput
+
+def git_auth = "xxxxx-5699-483b-a920-2af11df61119"
+def image_auth = "xxxxx-b151-45b9-a94f-bd02d803ff22"
+def sonarqube_auth = "xxxxx-ffe9-4f44-ab63-08af986875e9"
+def kubectl_auth = "xxxxx-92c3-4c19-8490-9cf8ff7918ef"
+
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  name: jenkins-slave
+  namespace: jenkins
+spec:
+  tolerations:
+  - key: k8s-jenkins
+    operator: Equal
+    value: k8s-jenkins
+    effect: NoSchedule
+  imagePullSecrets:
+  - name: ecr-regcred
+  containers:
+  - name: docker
+    image: docker:28.1.1
+    imagePullPolicy: IfNotPresent
+    readinessProbe:
+      exec:
+        command: [sh, -c, "ls -S /var/run/docker.sock"]
+    command:
+    - sleep
+    args:
+    - 99d
+    volumeMounts:
+    - name: docker-socket
+      mountPath: /var/run
+  - name: docker-daemon
+    image: docker:28.1.1-dind
+    imagePullPolicy: IfNotPresent
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: docker-socket
+      mountPath: /var/run
+  - name: aws
+    #image: docker:28.1.1
+    image: xxxxx.dkr.ecr.ap-southeast-1.amazonaws.com/devops:aws
+    imagePullPolicy: IfNotPresent
+    readinessProbe:
+      exec:
+        command: [sh, -c, "ls -S /var/run/docker.sock"]
+    command:
+    - sleep
+    args:
+    - 99d
+    volumeMounts:
+    - name: docker-socket
+      mountPath: /var/run
+    - name: latest-image-cache
+      mountPath: /image
+  - name: golang
+    image: golang:1.25.3
+    imagePullPolicy: IfNotPresent
+    command:
+    - sleep
+    args:
+    - 99d
+    volumeMounts:
+    - name: golang-cache
+      mountPath: /go/pkg/mod
+    - name: go-build-cache
+      mountPath: /root/.cache/go-build
+  - name: sonar-scanner
+    image: sonarsource/sonar-scanner-cli:11.4
+    imagePullPolicy: IfNotPresent
+    command:
+    - sleep
+    args:
+    - 99d
+  - name: jnlp
+    image: jenkins/inbound-agent:3327.v868139a_d00e0-6
+    imagePullPolicy: IfNotPresent
+  volumes:
+  - name: docker-socket
+    emptyDir: {}
+  - name: golang-cache
+    persistentVolumeClaim:
+      claimName: jenkins-slave-golang-cache
+  - name: go-build-cache
+    persistentVolumeClaim:
+      claimName: jenkins-slave-go-build-cache
+  - name: latest-image-cache
+    persistentVolumeClaim:
+      claimName: jenkins-slave-latest-image-cache
+'''
+        }
+    }
+
+environment {
+AppName = "${AppName}"
+GitRepo = "${GitRepo}"
+GitBranch = "${GitBranch}"
+Server = "${Server}"
+RepoName = "${RepoName}"
+BaseImage = "${BaseImage}"
+}
+
+    parameters {
+        string(name: 'AppName', defaultValue: 'order', description: '服务名')
+        string(name: 'GitRepo', defaultValue: 'https://git.xxxxx.com/xxxxx/order.git', description: '代码仓库地址')
+        string(name: 'GitBranch', defaultValue: 'master', description: '代码版本')
+        string(name: 'Server', defaultValue: 'xxxxx.dkr.ecr.ap-southeast-1.amazonaws.com', description: '仓库地址')
+        string(name: 'RepoName', defaultValue: 'order', description: '仓库名字（仓库自动创建）')
+        string(name: 'BaseImage', defaultValue: 'rockylinux/rockylinux:10', description: '基础镜像')
+    }
+
+    stages {
+        stage('拉取代码') {
+            steps {
+            git branch: "${GitBranch}", credentialsId: "${git_auth}", url: "${GitRepo}"
+            }
+        }
+        
+        stage('代码编译') {
+            steps {
+              container('golang') {
+                sh """
+cat > ~/.netrc << 'EOF'
+machine git.xxxxx.com
+login jenkins
+password glpat-xxxxx
+EOF
+
+go mod tidy
+
+cd order && GOOS=linux GOARCH=amd64 go build -ldflags "-X main.Version= -s -w" -buildvcs=false -o app
+
+ls -l
+
+cp app ../
+                   """
+                }
+            }
+        }
+
+        stage('打包镜像') {
+            steps {
+              script {env.GIT_COMMIT_MSG = sh (script: 'git rev-parse --short HEAD', returnStdout: true).trim()}
+              container('docker') {
+sh '''
+cat > Dockerfile << EOF
+FROM rockylinux/rockylinux:10
+
+# 创建应用目录
+RUN mkdir -p /app
+WORKDIR /app
+
+# 复制预编译的二进制文件和配置文件
+COPY app /app/app
+COPY ./common/mi18n/translations/lang.yaml /app/common/mi18n/translations/lang.yaml
+
+# 暴露端口
+EXPOSE 8080
+
+# 设置启动命令 (使用配置文件)
+CMD ["/app/app", "serve", "http"]
+EOF
+
+docker build -t ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID} .
+'''
+                }
+            }
+        }
+
+        stage('推送镜像') {
+            steps {
+              container('aws') {
+                sh """
+aws --version
+
+aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin xxxxx.dkr.ecr.ap-southeast-1.amazonaws.com
+
+docker push ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID}
+
+echo ${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID}  >> /image/prod-order-latest-images.sh
+                """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                // 获取当前北京时间
+                def buildTime = new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Shanghai'))
+
+                // 获取触发人
+                def cause = currentBuild.getBuildCauses()[0]
+                def user = cause.userName ?: "系统触发"
+                
+                def latest = env.LATEST_IMAGE ?: "unknown"
+                def msg = """✅ 镜像构建成功：
+环境：生产环境
+应用：order
+分支：${GitBranch} 
+镜像：${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID}
+运行人：${user}
+时间：${buildTime}
+"""
+                // ✅ 使用 JsonOutput 确保合法 JSON
+                def payload = JsonOutput.toJson([
+                    msg_type: "text",
+                    content: [text: msg]
+                ])
+                sh """
+                curl -s -X POST \
+                  -H 'Content-Type: application/json' \
+                  -d '${payload}' \
+                  "https://open.larksuite.com/open-apis/bot/v2/hook/xxxxx-xxxxx-xxxxx-xxxxx"
+                """
+            }
+        }
+
+        failure {
+            script {
+                def msg = """❌ 构建失败：
+环境：生产环境
+应用：order
+分支：${GitBranch} 
+镜像：${Server}/${RepoName}:${GitBranch}-${GIT_COMMIT_MSG}-${BUILD_ID}
+运行人：${user}
+时间：${buildTime}
+"""
+                def payload = JsonOutput.toJson([
+                    msg_type: "text",
+                    content: [text: msg]
+                ])
+                sh """
+                curl -s -X POST \
+                  -H 'Content-Type: application/json' \
+                  -d '${payload}' \
+                  "https://open.larksuite.com/open-apis/bot/v2/hook/xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"
+                """
+            }
+        }
+    }
+}
